@@ -1,0 +1,74 @@
+{
+  "name": "quantum-devops-ci",
+  "version": "1.0.0",
+  "description": "GitHub Actions templates to bring CI/CD discipline to Qiskit & Cirq workflows",
+  "main": "src/cli.js",
+  "bin": {
+    "quantum-devops-ci": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "init": "node src/cli.js init",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "setup": "npm install && npm run setup:python",
+    "setup:python": "pip install -e .",
+    "demo": "node examples/demo.js"
+  },
+  "keywords": [
+    "quantum",
+    "devops",
+    "ci-cd",
+    "qiskit",
+    "cirq",
+    "github-actions",
+    "quantum-computing",
+    "testing",
+    "automation"
+  ],
+  "author": "Quantum DevOps Community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quantum-devops/quantum-devops-ci.git"
+  },
+  "bugs": {
+    "url": "https://github.com/quantum-devops/quantum-devops-ci/issues"
+  },
+  "homepage": "https://quantum-devops-ci.readthedocs.io",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "fs-extra": "^11.1.1",
+    "inquirer": "^9.2.7",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.1",
+    "yaml": "^2.3.1",
+    "semver": "^7.5.4"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.44.0",
+    "eslint-config-standard": "^17.1.0",
+    "prettier": "^3.0.0",
+    "@types/node": "^20.4.0"
+  },
+  "peerDependencies": {
+    "python": ">=3.8"
+  },
+  "files": [
+    "src/",
+    "templates/",
+    "examples/",
+    "quantum-tests/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -1,0 +1,229 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum-devops-ci"
+version = "1.0.0"
+description = "Python testing framework for quantum DevOps CI/CD pipelines"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Quantum DevOps Community", email = "community@quantum-devops.org"}
+]
+maintainers = [
+    {name = "Quantum DevOps Community", email = "community@quantum-devops.org"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Systems Administration"
+]
+keywords = [
+    "quantum",
+    "testing",
+    "ci-cd",
+    "devops",
+    "qiskit",
+    "cirq",
+    "pennylane",
+    "noise-simulation",
+    "quantum-hardware"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
+    "pytest-mock>=3.10.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
+    "matplotlib>=3.5.0",
+    "pyyaml>=6.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "jsonschema>=4.0.0",
+    "requests>=2.28.0",
+    "packaging>=21.0"
+]
+
+[project.optional-dependencies]
+qiskit = [
+    "qiskit>=0.45.0",
+    "qiskit-aer>=0.12.0",
+    "qiskit-ibm-runtime>=0.15.0",
+    "qiskit-algorithms>=0.2.0"
+]
+cirq = [
+    "cirq>=1.3.0",
+    "cirq-qsim>=0.15.0",
+    "cirq-google>=1.3.0"
+]
+pennylane = [
+    "pennylane>=0.33.0",
+    "pennylane-lightning>=0.33.0",
+    "pennylane-qiskit>=0.33.0"
+]
+braket = [
+    "amazon-braket-sdk>=1.65.0"
+]
+all = [
+    "quantum-devops-ci[qiskit,cirq,pennylane,braket]"
+]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+    "sphinx>=6.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "nbsphinx>=0.9.0",
+    "jupyter>=1.0.0"
+]
+
+[project.urls]
+Homepage = "https://quantum-devops-ci.readthedocs.io"
+Documentation = "https://quantum-devops-ci.readthedocs.io"
+Repository = "https://github.com/quantum-devops/quantum-devops-ci"
+"Bug Tracker" = "https://github.com/quantum-devops/quantum-devops-ci/issues"
+Changelog = "https://github.com/quantum-devops/quantum-devops-ci/blob/main/CHANGELOG.md"
+
+[project.scripts]
+quantum-test = "quantum_devops_ci.cli:main"
+quantum-lint = "quantum_devops_ci.linting.cli:main"
+quantum-benchmark = "quantum_devops_ci.benchmarking.cli:main"
+quantum-deploy = "quantum_devops_ci.deployment.cli:main"
+
+[project.entry-points."pytest_plugins"]
+quantum_devops_ci = "quantum_devops_ci.pytest_plugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["quantum_devops_ci*"]
+
+[tool.setuptools.package-data]
+quantum_devops_ci = [
+    "templates/**/*",
+    "configs/**/*",
+    "schemas/**/*"
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["quantum_devops_ci"]
+known_third_party = ["qiskit", "cirq", "pennylane", "numpy", "scipy", "matplotlib", "pytest"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "qiskit.*",
+    "cirq.*",
+    "pennylane.*",
+    "braket.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=quantum_devops_ci",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml"
+]
+testpaths = [
+    "tests",
+    "quantum-tests"
+]
+python_files = [
+    "test_*.py",
+    "*_test.py"
+]
+python_classes = [
+    "Test*",
+    "*Test"
+]
+python_functions = [
+    "test_*"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "hardware: marks tests that require real quantum hardware",
+    "qiskit: marks tests specific to Qiskit framework",
+    "cirq: marks tests specific to Cirq framework",
+    "pennylane: marks tests specific to PennyLane framework"
+]
+
+[tool.coverage.run]
+source = ["src/quantum_devops_ci"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/site-packages/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
