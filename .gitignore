@@ -205,3 +205,159 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Gatsby files
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Quantum Computing Specific
+# Quantum simulation results
+*.qasm
+*.qpy
+quantum_results/
+simulation_data/
+noise_profiles/
+calibration_data/
+
+# Quantum hardware access credentials
+.qiskit/
+.cirq/
+.pennylane/
+.braket/
+quantum_credentials.json
+ibmq_credentials.py
+aws_credentials.json
+google_credentials.json
+
+# Quantum experiment outputs
+experiment_results/
+benchmark_data/
+performance_logs/
+quantum_benchmarks/
+
+# Circuit visualization outputs
+*.png
+*.pdf
+*.svg
+circuit_diagrams/
+
+# Pulse sequences and schedules
+pulse_schedules/
+*.pulse
+
+# Quantum job queue data
+job_queue/
+*.job
+
+# Hardware calibration and characterization
+characterization_data/
+fidelity_data/
+error_rates/
+
+# Cost tracking and usage data
+usage_logs/
+cost_reports/
+quota_usage/
+
+# Docker
+.dockerignore
+Dockerfile.local
+
+# CI/CD artifacts
+.github/workflows/generated/
+test-results/
+artifacts/
+deployment_logs/
+
+# Local configuration overrides
+config.local.yml
+quantum.local.yml
+.env.local
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Temporary quantum circuit files
+temp_circuits/
+scratch/
