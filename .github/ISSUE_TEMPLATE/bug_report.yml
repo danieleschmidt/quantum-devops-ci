@@ -1,0 +1,219 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in quantum-devops-ci
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below to help us understand and reproduce the issue.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please check these boxes before submitting
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have read the documentation and troubleshooting guide
+          required: true
+        - label: I can reproduce this issue consistently
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the issue
+      placeholder: |
+        1. Run command `quantum-test ...`
+        2. Configure quantum backend with...
+        3. Execute quantum circuit...
+        4. See error...
+      value: |
+        1. 
+        2. 
+        3. 
+        4. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe what should have happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior  
+      description: What actually happened
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Information
+      description: Please provide your environment details
+      value: |
+        **Quantum DevOps CI Version:** 
+        **Python Version:** 
+        **Node.js Version:** 
+        **Operating System:** 
+        **Quantum Framework:** (e.g., Qiskit 0.45.0)
+        **Quantum Backend:** (e.g., qasm_simulator)
+        **Docker/Container:** (Yes/No)
+        
+        **Additional Context:**
+        - Package manager: (npm/pip/conda)
+        - Installation method: (source/pip/npm/docker)
+        - CI/CD environment: (GitHub Actions/GitLab CI/Jenkins/Local)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: quantum_framework
+    attributes:
+      label: Quantum Framework
+      description: Which quantum computing framework is affected?
+      options:
+        - Qiskit
+        - Cirq  
+        - PennyLane
+        - Amazon Braket
+        - Multiple frameworks
+        - Framework-agnostic
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component of quantum-devops-ci is affected?
+      options:
+        - Testing framework (quantum-test)
+        - Linting (quantum-lint)
+        - Benchmarking (quantum-benchmark)
+        - Deployment (quantum-deploy)
+        - CLI interface
+        - Docker containers
+        - Documentation
+        - CI/CD workflows
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs and Output
+      description: Please paste any relevant error messages, stack traces, or console output
+      placeholder: |
+        Paste error logs here...
+        
+        Use code blocks (```) for better formatting
+      render: shell
+
+  - type: textarea
+    id: circuit_code
+    attributes:
+      label: Quantum Circuit Code (if applicable)
+      description: If the bug involves a specific quantum circuit, please provide the code
+      placeholder: |
+        # Paste your quantum circuit code here
+        from qiskit import QuantumCircuit
+        
+        qc = QuantumCircuit(2, 2)
+        # ... your circuit definition
+      render: python
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration Files
+      description: Relevant configuration files (quantum.config.yml, .pre-commit-config.yaml, etc.)
+      placeholder: |
+        # Paste relevant configuration here
+        # Remove any sensitive information like tokens
+      render: yaml
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Bug Severity
+      description: How severe is this bug?
+      options:
+        - Critical - System crashes, data loss, security vulnerability
+        - High - Major functionality broken, no workaround
+        - Medium - Important functionality affected, workaround available  
+        - Low - Minor issue, cosmetic problem
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does this bug occur?
+      options:
+        - Always - 100% of the time
+        - Often - More than 50% of the time
+        - Sometimes - Less than 50% of the time
+        - Rarely - Very infrequently
+        - Once - Happened only once
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: If you found a temporary workaround, please describe it
+      placeholder: Describe any workaround you found...
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information that might be relevant
+      placeholder: |
+        - Related issues or PRs
+        - External dependencies
+        - Network conditions
+        - Hardware specifications
+        - Quantum hardware access details
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## Security Notice
+        
+        ⚠️ **Do not include sensitive information** such as:
+        - Quantum hardware tokens or API keys
+        - Passwords or authentication credentials
+        - Personal or proprietary quantum circuits
+        - Internal network configurations
+        
+        If this is a security vulnerability, please report it privately via our [Security Policy](SECURITY.md).

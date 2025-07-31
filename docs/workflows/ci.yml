@@ -1,0 +1,451 @@
+# Main CI/CD Pipeline for Quantum DevOps CI
+# Copy this file to .github/workflows/ci.yml
+
+name: 🌌 Quantum DevOps CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      quantum_backend:
+        description: 'Quantum backend for testing'
+        required: false
+        default: 'qasm_simulator'
+        type: choice
+        options:
+          - qasm_simulator
+          - statevector_simulator
+          - aer_simulator
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  QUANTUM_ENV: ci
+  
+jobs:
+  # Pre-flight checks and setup
+  setup:
+    name: 🔧 Setup and Validation
+    runs-on: ubuntu-latest
+    outputs:
+      python-matrix: ${{ steps.matrix.outputs.python-versions }}
+      node-matrix: ${{ steps.matrix.outputs.node-versions }}
+      should-run-quantum: ${{ steps.changes.outputs.quantum }}
+      should-run-security: ${{ steps.changes.outputs.security }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            quantum:
+              - 'src/quantum_devops_ci/**'
+              - 'quantum-tests/**'
+              - 'examples/**/*.py'
+              - 'pyproject.toml'
+            security:
+              - 'src/**'
+              - 'package.json'
+              - 'requirements*.txt'
+              - '.pre-commit-config.yaml'
+
+      - name: Set test matrix
+        id: matrix
+        run: |
+          echo "python-versions=[\"3.8\", \"3.9\", \"3.10\", \"3.11\", \"3.12\"]" >> $GITHUB_OUTPUT
+          echo "node-versions=[\"16\", \"18\", \"20\"]" >> $GITHUB_OUTPUT
+
+      - name: Validate project structure
+        run: |
+          echo "Validating project structure..."
+          test -f pyproject.toml || (echo "Missing pyproject.toml" && exit 1)
+          test -f package.json || (echo "Missing package.json" && exit 1)
+          test -d src/quantum_devops_ci || (echo "Missing src directory" && exit 1)
+          echo "✅ Project structure valid"
+
+  # Code quality and linting
+  lint:
+    name: 🔍 Code Quality & Linting
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e .[dev,all]
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Run pre-commit hooks
+        uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --all-files
+
+      - name: Python linting (Flake8)
+        run: flake8 src/ tests/ quantum-tests/
+
+      - name: Python type checking (MyPy)
+        run: mypy src/quantum_devops_ci
+
+      - name: Python security linting (Bandit)
+        run: |
+          bandit -r src/ -f json -o bandit-report.json
+          bandit -r src/ -f txt
+
+      - name: JavaScript linting (ESLint)
+        run: npm run lint
+
+      - name: Quantum circuit linting
+        run: |
+          quantum-lint check src/ --max-depth 100 --check-gates --output-format json
+        continue-on-error: true
+
+      - name: Upload lint reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lint-reports
+          path: |
+            bandit-report.json
+            flake8-report.txt
+            quantum-lint-report.json
+
+  # Multi-version Python testing
+  test-python:
+    name: 🐍 Python Tests (${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    needs: [setup, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(needs.setup.outputs.python-matrix) }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        exclude:
+          # Skip some combinations to reduce CI load
+          - os: macos-latest
+            python-version: '3.8'
+          - os: windows-latest
+            python-version: '3.8'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e .[dev,qiskit,cirq,pennylane]
+
+      - name: Run unit tests
+        run: |
+          pytest tests/ -v --cov=quantum_devops_ci --cov-report=xml --cov-report=html
+        env:
+          COVERAGE_FILE: .coverage.${{ matrix.python-version }}.${{ matrix.os }}
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: python-${{ matrix.python-version }}-${{ matrix.os }}
+          fail_ci_if_error: false
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-python-${{ matrix.python-version }}-${{ matrix.os }}
+          path: |
+            htmlcov/
+            .coverage.*
+            pytest-report.xml
+
+  # Node.js testing
+  test-node:
+    name: 📦 Node.js Tests (${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [setup, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJson(needs.setup.outputs.node-versions) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Node.js tests
+        run: npm test
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Upload Node.js test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            coverage/
+            test-results/
+
+  # Quantum-specific testing
+  quantum-tests:
+    name: 🌌 Quantum Framework Tests
+    runs-on: ubuntu-latest
+    needs: [setup, test-python]
+    if: needs.setup.outputs.should-run-quantum == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: [qiskit, cirq, pennylane]
+        backend: [qasm_simulator, statevector_simulator]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install quantum dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e .[dev,${{ matrix.framework }}]
+
+      - name: Run quantum tests
+        run: |
+          quantum-test run \
+            --framework ${{ matrix.framework }} \
+            --backend ${{ matrix.backend }} \
+            --shots 1000 \
+            --timeout 600 \
+            --verbose
+        env:
+          QUANTUM_BACKEND: ${{ matrix.backend }}
+          QUANTUM_FRAMEWORK: ${{ matrix.framework }}
+
+      - name: Run noise-aware tests
+        run: |
+          quantum-test run \
+            --framework ${{ matrix.framework }} \
+            --backend ${{ matrix.backend }} \
+            --noise-level 0.01 \
+            --shots 1000 \
+            --verbose
+        continue-on-error: true
+
+      - name: Generate quantum test report
+        run: |
+          quantum-test report \
+            --format json \
+            --output quantum-test-report-${{ matrix.framework }}-${{ matrix.backend }}.json
+
+      - name: Upload quantum test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: quantum-test-results-${{ matrix.framework }}-${{ matrix.backend }}
+          path: |
+            quantum-test-report-*.json
+            quantum-test-results/
+
+  # Security scanning
+  security:
+    name: 🔒 Security Scanning
+    runs-on: ubuntu-latest
+    needs: [setup, lint]
+    if: needs.setup.outputs.should-run-security == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e .[dev]
+          pip install safety pip-audit
+
+      - name: Python dependency vulnerability scan (Safety)
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check
+
+      - name: Python dependency audit (pip-audit)
+        run: |
+          pip-audit --format=json --output=pip-audit-report.json || true
+          pip-audit
+
+      - name: Node.js dependency audit
+        run: |
+          npm audit --audit-level high --json > npm-audit-report.json || true
+          npm audit --audit-level high
+
+      - name: Secret detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            safety-report.json
+            pip-audit-report.json
+            npm-audit-report.json
+            bandit-report.json
+
+  # Docker build and test
+  docker:
+    name: 🐳 Docker Build & Test
+    runs-on: ubuntu-latest
+    needs: [test-python, test-node]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build development image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: development
+          tags: quantum-devops-ci:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build production image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: production
+          tags: quantum-devops-ci:prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker images
+        run: |
+          # Test development image
+          docker run --rm quantum-devops-ci:dev quantum-test --version
+          
+          # Test production image
+          docker run --rm quantum-devops-ci:prod quantum-test --version
+
+      - name: Run Docker Compose tests  
+        run: |
+          docker-compose -f docker-compose.yml config
+          docker-compose -f docker-compose.yml up -d quantum-dev
+          docker-compose -f docker-compose.yml exec -T quantum-dev quantum-test run --ci
+          docker-compose -f docker-compose.yml down
+
+  # Final status check
+  ci-status:
+    name: ✅ CI Status
+    runs-on: ubuntu-latest
+    needs: [lint, test-python, test-node, quantum-tests, security, docker]
+    if: always()
+    
+    steps:
+      - name: Check CI results
+        run: |
+          echo "Lint status: ${{ needs.lint.result }}"
+          echo "Python tests status: ${{ needs.test-python.result }}"
+          echo "Node.js tests status: ${{ needs.test-node.result }}"
+          echo "Quantum tests status: ${{ needs.quantum-tests.result }}"
+          echo "Security scan status: ${{ needs.security.result }}"
+          echo "Docker build status: ${{ needs.docker.result }}"
+          
+          if [[ "${{ needs.lint.result }}" == "failure" || 
+                "${{ needs.test-python.result }}" == "failure" || 
+                "${{ needs.test-node.result }}" == "failure" || 
+                "${{ needs.docker.result }}" == "failure" ]]; then
+            echo "❌ CI pipeline failed"
+            exit 1
+          else
+            echo "✅ CI pipeline passed"
+          fi
+
+      - name: Update status badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # This would update a status badge
+          echo "CI Status: Passing" > ci-status.txt
+
+      - name: Post CI summary
+        run: |
+          echo "## 🌌 Quantum DevOps CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Tests | ${{ needs.test-python.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node.js Tests | ${{ needs.test-node.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quantum Tests | ${{ needs.quantum-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
