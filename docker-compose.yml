@@ -1,0 +1,242 @@
+# Docker Compose configuration for quantum-devops-ci development
+version: '3.8'
+
+services:
+  # Main development environment
+  quantum-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+      args:
+        QUANTUM_FRAMEWORKS: "qiskit,cirq,pennylane"
+        PYTHON_VERSION: "3.11"
+    container_name: quantum-devops-dev
+    volumes:
+      # Mount source code for live development
+      - .:/workspace:cached
+      # Persist Python packages
+      - quantum-venv:/workspace/.venv
+      # Persist Node modules
+      - quantum-node-modules:/workspace/node_modules
+      # Mount quantum credentials (create these directories locally)
+      - ~/.qiskit:/home/quantum/.qiskit:ro
+      - ~/.aws:/home/quantum/.aws:ro
+      # Git configuration
+      - ~/.gitconfig:/home/quantum/.gitconfig:ro
+    environment:
+      - QUANTUM_ENV=development
+      - PYTHONPATH=/workspace/src
+      - NODE_ENV=development
+    ports:
+      # Jupyter notebook
+      - "8888:8888"
+      # Documentation server
+      - "8000:8000"
+      # Monitoring dashboard
+      - "3000:3000"
+    networks:
+      - quantum-network
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    command: bash
+
+  # Production-like testing environment
+  quantum-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: quantum-devops-prod
+    volumes:
+      - quantum-results:/app/results
+    environment:
+      - QUANTUM_ENV=production
+      - LOG_LEVEL=INFO
+    networks:
+      - quantum-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "quantum-test", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # CI/CD runner environment
+  quantum-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ci-runner
+    container_name: quantum-devops-ci
+    volumes:
+      - .:/app:ro
+      - quantum-ci-cache:/tmp/quantum-ci
+      # Docker socket for container builds
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CI=true
+      - QUANTUM_ENV=ci
+      - COVERAGE_FILE=/tmp/quantum-ci/.coverage
+    networks:
+      - quantum-network
+    command: quantum-test run --ci --coverage
+
+  # Documentation server
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: quantum-docs
+    volumes:
+      - .:/workspace:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - quantum-network
+    working_dir: /workspace
+    command: >
+      bash -c "
+        pip install mkdocs-material mkdocs-jupyter &&
+        mkdocs serve --dev-addr 0.0.0.0:8080
+      "
+
+  # Jupyter notebook server for quantum experiments
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: quantum-jupyter
+    volumes:
+      - .:/workspace
+      - jupyter-data:/home/quantum/.jupyter
+    ports:
+      - "8889:8888"
+    networks:
+      - quantum-network
+    environment:
+      - JUPYTER_TOKEN=quantum-dev-token
+      - JUPYTER_ENABLE_LAB=yes
+    command: >
+      bash -c "
+        pip install jupyterlab ipywidgets qiskit[visualization] &&
+        jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+      "
+
+  # Quantum hardware simulator
+  quantum-simulator:
+    image: rigetti/qvm
+    container_name: quantum-qvm
+    ports:
+      - "5000:5000"
+    networks:
+      - quantum-network
+    command: qvm -S
+
+  # Redis for caching quantum results
+  redis:
+    image: redis:7-alpine
+    container_name: quantum-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - quantum-network
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for storing experiment results
+  postgres:
+    image: postgres:15-alpine
+    container_name: quantum-postgres
+    environment:
+      POSTGRES_DB: quantum_experiments
+      POSTGRES_USER: quantum
+      POSTGRES_PASSWORD: quantum_dev_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - quantum-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantum"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: quantum-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - quantum-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: quantum-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=quantum_admin
+    networks:
+      - quantum-network
+    depends_on:
+      - prometheus
+
+volumes:
+  quantum-venv:
+  quantum-node-modules:
+  quantum-results:
+  quantum-ci-cache:
+  jupyter-data:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  quantum-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Development workflow commands:
+# 
+# Start development environment:
+# docker-compose up quantum-dev
+#
+# Run tests in CI environment:
+# docker-compose run --rm quantum-ci
+#
+# Start full stack with monitoring:
+# docker-compose up -d
+#
+# View logs:
+# docker-compose logs -f quantum-dev
+#
+# Clean up:
+# docker-compose down -v
+#
+# Rebuild containers:
+# docker-compose build --no-cache

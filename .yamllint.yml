@@ -1,0 +1,69 @@
+# YAML Linting Configuration
+extends: default
+
+rules:
+  # Line length - allow longer lines for readability
+  line-length:
+    max: 120
+    level: warning
+
+  # Comments - allow comments without space after #
+  comments:
+    min-spaces-from-content: 1
+
+  # Indentation - 2 spaces standard
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Key duplicates - error on duplicate keys
+  key-duplicates: error
+
+  # Key ordering - don't enforce alphabetical ordering
+  key-ordering: disable
+
+  # Octal values - allow octal values
+  octal-values: disable
+
+  # Quoted strings - don't enforce quoting style
+  quoted-strings: disable
+
+  # Truthy values - allow yes/no, on/off, etc.
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Empty lines - allow reasonable empty line usage
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # Brackets - allow reasonable bracket usage
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Braces - allow reasonable brace usage  
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+ignore: |
+  # Ignore generated files
+  node_modules/
+  .git/
+  
+  # Ignore build artifacts
+  dist/
+  build/
+  coverage/
+  
+  # Ignore temporary files
+  *.tmp
+  *.temp
+  
+  # Ignore some config files that might have different formatting
+  docker-compose.yml
+  .github/workflows/generated/*

@@ -1,0 +1,264 @@
+{
+  "name": "Quantum DevOps Development Environment",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "development",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python extensions
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.flake8",
+        "ms-python.mypy-type-checker",
+        "ms-toolsai.jupyter",
+        
+        // JavaScript/TypeScript extensions
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        
+        // Git and GitHub
+        "github.vscode-pull-request-github",
+        "github.copilot",
+        "github.copilot-chat",
+        
+        // Docker and containers
+        "ms-vscode-remote.remote-containers",
+        "ms-azuretools.vscode-docker",
+        
+        // Documentation and markdown
+        "yzhang.markdown-all-in-one",
+        "davidanson.vscode-markdownlint",
+        
+        // YAML and JSON
+        "redhat.vscode-yaml",
+        "ms-vscode.vscode-json",
+        
+        // Quantum computing specific
+        "quantum-devops.quantum-circuit-visualizer",
+        "qiskit.qiskit-vscode",
+        
+        // Testing and debugging
+        "ms-python.python-debugger",
+        "hbenl.vscode-test-explorer",
+        "littlefoxteam.vscode-python-test-adapter",
+        
+        // Code quality and security
+        "ms-python.pylint",
+        "ms-python.bandit",
+        "emeraldwalk.runonsave"
+      ],
+      
+      "settings": {
+        // Python settings
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests", "quantum-tests"],
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": true,
+        "python.linting.mypyEnabled": true,
+        "python.linting.banditEnabled": true,
+        "python.formatting.provider": "black",
+        
+        // JavaScript/TypeScript settings
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true,
+          "source.organizeImports": true
+        },
+        
+        // Git settings
+        "git.autofetch": true,
+        "git.enableSmartCommit": true,
+        
+        // File associations for quantum formats
+        "files.associations": {
+          "*.qasm": "qasm",
+          "*.qpy": "json",
+          "quantum.config.yml": "yaml"
+        },
+        
+        // Terminal settings
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          }
+        },
+        
+        // Workspace settings
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/dist/**": true,
+          "**/__pycache__/**": true,
+          "**/.pytest_cache/**": true
+        },
+        
+        // Auto-save and formatting
+        "files.autoSave": "onFocusChange",
+        "editor.rulers": [88],
+        "editor.wordWrap": "on",
+        
+        // Quantum-specific settings
+        "quantum.circuitVisualization.enabled": true,
+        "quantum.linting.maxCircuitDepth": 100,
+        "quantum.testing.defaultBackend": "qasm_simulator"
+      },
+      
+      "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+          {
+            "label": "Install Dependencies",
+            "type": "shell",
+            "command": "npm install && pip install -e .[dev,all]",
+            "group": "build",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          },
+          {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "npm test",
+            "group": "test",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          },
+          {
+            "label": "Run Quantum Tests",
+            "type": "shell",
+            "command": "quantum-test run --verbose",
+            "group": "test",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          },
+          {
+            "label": "Lint Code",
+            "type": "shell",
+            "command": "npm run lint && quantum-lint check src/",
+            "group": "build",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          },
+          {
+            "label": "Format Code",
+            "type": "shell",
+            "command": "black src/ tests/ && prettier --write .",
+            "group": "build",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          },
+          {
+            "label": "Start Jupyter",
+            "type": "shell",
+            "command": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root",
+            "isBackground": true,
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "new"
+            }
+          },
+          {
+            "label": "Build Documentation",
+            "type": "shell",
+            "command": "cd docs && make html",
+            "group": "build",
+            "presentation": {
+              "echo": true,
+              "reveal": "always",
+              "focus": false,
+              "panel": "shared"
+            }
+          }
+        ]
+      }
+    }
+  },
+
+  "containerEnv": {
+    "QUANTUM_ENV": "development",
+    "PYTHONPATH": "/workspace/src",
+    "NODE_ENV": "development"
+  },
+
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/workspace/node_modules/.bin"
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.gitconfig,target=/home/quantum/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/quantum/.ssh,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.qiskit,target=/home/quantum/.qiskit,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.aws,target=/home/quantum/.aws,type=bind,consistency=cached,readonly"
+  ],
+
+  "forwardPorts": [
+    8888,  // Jupyter Lab
+    8000,  // Documentation server
+    3000,  // Development server
+    5000   // Quantum simulator
+  ],
+
+  "portsAttributes": {
+    "8888": {
+      "label": "Jupyter Lab",
+      "onAutoForward": "openPreview"
+    },
+    "8000": {
+      "label": "Documentation",
+      "onAutoForward": "openBrowser"
+    },
+    "3000": {
+      "label": "Development Server",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "remoteUser": "quantum",
+
+  "shutdownAction": "stopContainer"
+}
