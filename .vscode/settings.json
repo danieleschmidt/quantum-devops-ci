@@ -1,0 +1,190 @@
+{
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": ["--line-length=88"],
+  
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.linting.banditEnabled": true,
+  
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.nosetestsEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests",
+    "quantum-tests",
+    "--verbose",
+    "--cov=src/quantum_devops_ci",
+    "--cov-report=html",
+    "--cov-report=term-missing"
+  ],
+  
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true,
+    "source.fixAll.eslint": true,
+    "source.fixAll.flake8": true
+  },
+  
+  "files.associations": {
+    "*.qasm": "openqasm",
+    "*.qpy": "python",
+    "quantum.config.yml": "yaml",
+    ".quantum-lint.yml": "yaml",
+    "*.pulse": "json"
+  },
+  
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/node_modules": true,
+    "**/.coverage": true,
+    "**/htmlcov": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/quantum_results": true,
+    "**/simulation_data": true,
+    "**/*.qasm": false,
+    "**/*.qpy": false
+  },
+  
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/htmlcov": true,
+    "**/quantum_results": true,
+    "**/simulation_data": true
+  },
+  
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+    "QUANTUM_DEVOPS_ENV": "development"
+  },
+  
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+    "QUANTUM_DEVOPS_ENV": "development"
+  },
+  
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow": ".github/workflows/*.yml",
+    "https://json.schemastore.org/pre-commit-config": ".pre-commit-config.yaml",
+    "https://json.schemastore.org/yamllint": ".yamllint.yml"
+  },
+  
+  "eslint.workingDirectories": ["src"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  
+  "todoTree.general.tags": [
+    "TODO",
+    "FIXME", 
+    "BUG",
+    "HACK",
+    "NOTE",
+    "QUANTUM",
+    "PERF",
+    "SECURITY"
+  ],
+  
+  "todoTree.highlights.customHighlight": {
+    "TODO": {
+      "icon": "check",
+      "type": "line",
+      "foreground": "#FFD700",
+      "background": "#FFD70020"
+    },
+    "FIXME": {
+      "icon": "alert",
+      "type": "line", 
+      "foreground": "#FF6B6B",
+      "background": "#FF6B6B20"
+    },
+    "QUANTUM": {
+      "icon": "star",
+      "type": "line",
+      "foreground": "#9B59B6",
+      "background": "#9B59B620"
+    },
+    "SECURITY": {
+      "icon": "shield",
+      "type": "line",
+      "foreground": "#E74C3C",
+      "background": "#E74C3C20"
+    }
+  },
+  
+  "cSpell.words": [
+    "qiskit",
+    "cirq",
+    "pennylane",
+    "braket",
+    "qasm",
+    "openqasm",
+    "qubits",
+    "qubit",
+    "qaoi",
+    "vqe",
+    "qaoa",
+    "ansatz",
+    "fidelity",
+    "transpiler",
+    "backend",
+    "backends",
+    "simulators",
+    "noisy",
+    "depolarizing",
+    "decoherence",
+    "crosstalk",
+    "devops",
+    "cicd",
+    "pytest",
+    "mypy",
+    "bandit",
+    "flake8",
+    "isort",
+    "terragon",
+    "wsjf",
+    "sbom",
+    "slsa"
+  ],
+  
+  "jupyter.askForKernelRestart": false,
+  "jupyter.alwaysTrustNotebooks": true,
+  
+  "docker.enableDockerComposeLanguageService": true,
+  
+  "makefile.configureOnOpen": false,
+  
+  "coverage-gutters.coverageFileNames": [
+    "coverage.xml",
+    "coverage.lcov",
+    ".coverage",
+    "htmlcov/index.html"
+  ],
+  
+  "coverage-gutters.showLineCoverage": true,
+  "coverage-gutters.showRulerCoverage": true,
+  
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#663399",
+    "statusBar.foreground": "#ffffff",
+    "statusBarItem.hoverBackground": "#7744aa"
+  }
+}
