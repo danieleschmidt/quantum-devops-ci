@@ -1,0 +1,148 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "development"
+      }
+    },
+    {
+      "name": "Python: Pytest Current File",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "${file}",
+        "-v",
+        "--tb=short"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "test"
+      }
+    },
+    {
+      "name": "Python: Quantum Tests",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "quantum-tests/",
+        "-v",
+        "--tb=short",
+        "--cov=src/quantum_devops_ci"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "test"
+      }
+    },
+    {
+      "name": "Python: CLI Debug",
+      "type": "python", 
+      "request": "launch",
+      "program": "${workspaceFolder}/src/quantum_devops_ci/cli.py",
+      "args": [
+        "--help"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "development"
+      }
+    },
+    {
+      "name": "Node.js: CLI Debug",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/cli.js",
+      "args": [
+        "--help"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Python: Quantum Circuit Linting",
+      "type": "python",
+      "request": "launch",
+      "module": "quantum_devops_ci.linting.cli",
+      "args": [
+        "--check-circuits",
+        "--file",
+        "${file}"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "development"
+      }
+    },
+    {
+      "name": "Python: Cost Analysis",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/quantum_devops_ci/cost.py",
+      "args": [
+        "--analyze",
+        "--config",
+        "quantum.config.yml"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "QUANTUM_DEVOPS_ENV": "development"
+      }
+    },
+    {
+      "name": "Python: Attach to Process",
+      "type": "python",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Remote Debug",
+      "type": "python",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "justMyCode": false,
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/workspace"
+        }
+      ]
+    }
+  ],
+  
+  "compounds": [
+    {
+      "name": "Debug Python + Node CLI",
+      "configurations": [
+        "Python: CLI Debug",
+        "Node.js: CLI Debug"
+      ],
+      "stopAll": true
+    }
+  ]
+}

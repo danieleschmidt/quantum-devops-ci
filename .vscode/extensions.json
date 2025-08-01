@@ -1,0 +1,67 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.pylint", 
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "ms-python.mypy-type-checker",
+    "ms-python.flake8",
+    "charliermarsh.ruff",
+    "ms-python.debugpy",
+    
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode", 
+    "dbaeumer.vscode-eslint",
+    
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "timonwong.shellcheck",
+    "ms-vscode.makefile-tools",
+    
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-containers",
+    
+    "github.copilot",
+    "github.copilot-chat",
+    "github.vscode-pull-request-github",
+    
+    "streetsidesoftware.code-spell-checker",
+    "eamodio.gitlens",
+    "gruntfuggly.todo-tree",
+    "mechatroner.rainbow-csv",
+    
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    "ms-python.vscode-pylance",
+    "kevinrose.vsc-python-indent",
+    
+    "ryanluker.vscode-coverage-gutters",
+    "hbenl.vscode-test-explorer",
+    "littlefoxteam.vscode-python-test-adapter",
+    
+    "ms-toolsai.jupyter",
+    "ms-toolsai.jupyter-keymap",
+    "ms-toolsai.jupyter-renderers",
+    
+    "bierner.github-markdown-preview",
+    "shd101wyy.markdown-preview-enhanced",
+    
+    "bradlc.vscode-tailwindcss",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    
+    "usernamehw.errorlens",
+    "oderwat.indent-rainbow",
+    "aaron-bond.better-comments",
+    
+    "ms-vscode.wordcount",
+    "alefragnani.project-manager",
+    "formulahendry.code-runner"
+  ],
+  
+  "unwantedRecommendations": [
+    "ms-python.pylint",
+    "ms-python.autopep8"
+  ]
+}

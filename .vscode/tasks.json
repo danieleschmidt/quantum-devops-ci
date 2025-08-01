@@ -1,0 +1,253 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Python: Install Dependencies",
+      "type": "shell",
+      "command": "pip",
+      "args": ["install", "-e", ".[dev,qiskit,cirq]"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Node.js: Install Dependencies", 
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Run Tests",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "pytest", "tests/", "quantum-tests/", "-v", "--cov=src/quantum_devops_ci"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"  
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Node.js: Run Tests",
+      "type": "shell", 
+      "command": "npm",
+      "args": ["test"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Lint",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "flake8", "src/", "tests/", "quantum-tests/"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$flake8"]
+    },
+    {
+      "label": "Node.js: Lint",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "lint"],
+      "group": "build", 
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "Python: Format Code",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "black", "src/", "tests/", "quantum-tests/"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Type Check",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "mypy", "src/quantum_devops_ci"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$mypy"]
+    },
+    {
+      "label": "Pre-commit: Install",
+      "type": "shell",
+      "command": "pre-commit",
+      "args": ["install"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pre-commit: Run All Files",
+      "type": "shell",
+      "command": "pre-commit",
+      "args": ["run", "--all-files"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Build Image",
+      "type": "shell",
+      "command": "docker",
+      "args": ["build", "-t", "quantum-devops-ci:latest", "."],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Run Container",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "-it", "--rm", "-v", "${workspaceFolder}:/workspace", "quantum-devops-ci:latest"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Quantum: Lint Circuits",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "quantum_devops_ci.linting.cli", "--check-circuits", "--check-gates"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always", 
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Quantum: Cost Analysis",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "quantum_devops_ci.cost", "--analyze", "--config", "quantum.config.yml"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Security: Scan Dependencies",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "safety", "check", "--json", "--output", "safety-report.json"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Bandit: Security Analysis",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "bandit", "-r", "src/", "-f", "json", "-o", "bandit-report.json"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Full Build Pipeline",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Python: Install Dependencies",
+        "Node.js: Install Dependencies", 
+        "Pre-commit: Install",
+        "Python: Lint",
+        "Node.js: Lint",
+        "Python: Type Check",
+        "Python: Run Tests",
+        "Node.js: Run Tests"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    }
+  ]
+}
