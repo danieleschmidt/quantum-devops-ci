@@ -2,7 +2,20 @@
 
 This directory contains documentation and templates for GitHub Actions workflows that should be implemented in `.github/workflows/`.
 
-⚠️ **Important**: These are documentation templates. You must manually create the actual `.github/workflows/` directory and copy these templates there.
+⚠️ **Important**: Due to GitHub App permission limitations, the workflow files in `examples/` need to be manually copied to `.github/workflows/` by a repository administrator.
+
+## 🚀 Quick Setup
+
+```bash
+# Copy workflow files to the correct location
+mkdir -p .github/workflows
+cp docs/workflows/examples/*.yml .github/workflows/
+
+# Commit and push the workflows
+git add .github/workflows/
+git commit -m \"feat: add GitHub Actions workflows\"
+git push origin main
+```
 
 ## 🔧 Required Workflows
 
