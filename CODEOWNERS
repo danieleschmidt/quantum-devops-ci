@@ -1,0 +1,78 @@
+# Global ownership
+* @quantum-devops-team
+
+# Core infrastructure
+/.github/ @devops-team @security-team
+/Dockerfile @devops-team
+/docker-compose.yml @devops-team
+/.devcontainer/ @devops-team
+
+# Source code
+/src/ @quantum-team @development-team
+/quantum-tests/ @quantum-team @qa-team
+/examples/ @quantum-team @documentation-team
+
+# Configuration files
+*.yml @devops-team
+*.yaml @devops-team
+*.json @devops-team
+/pyproject.toml @development-team
+/package.json @development-team
+
+# Documentation
+/docs/ @documentation-team
+*.md @documentation-team
+README.md @quantum-team @documentation-team
+
+# Security-sensitive files
+/.github/workflows/ @devops-team @security-team
+/scripts/ @devops-team @security-team
+
+# Quantum-specific components
+/src/quantum_devops_ci/ @quantum-team
+/quantum-tests/ @quantum-team
+/examples/frameworks/ @quantum-team
+
+# Monitoring and observability
+/docs/monitoring/ @devops-team @sre-team
+/docs/runbooks/ @devops-team @sre-team
+
+# Build and deployment
+/Makefile @devops-team
+/.pre-commit-config.yaml @development-team
+/.eslintrc.json @development-team
+/.prettierrc @development-team
+
+# Project management
+/.github/project-metrics.json @product-team @devops-team
+/scripts/automation/ @devops-team
+
+# Team assignments (GitHub usernames)
+# Replace with actual GitHub usernames
+
+# Development Team
+# @alice-dev
+# @bob-dev
+# @carol-dev
+
+# Quantum Team
+# @quantum-alice
+# @quantum-bob
+# @quantum-researcher
+
+# DevOps Team
+# @devops-lead
+# @sre-engineer
+# @platform-engineer
+
+# Security Team
+# @security-lead
+# @security-engineer
+
+# Documentation Team
+# @tech-writer
+# @docs-maintainer
+
+# Product Team
+# @product-manager
+# @product-owner

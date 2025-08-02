@@ -1,0 +1,369 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+  CACHE_VERSION: 'v1'
+
+jobs:
+  # Code Quality Checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -e .[dev,all]
+          
+      - name: Run linting
+        run: |
+          npm run lint
+          npm run quantum-lint
+          
+      - name: Check formatting
+        run: |
+          npm run format:js -- --check
+          black --check src/ tests/ quantum-tests/
+          
+      - name: Type checking
+        run: |
+          npm run typecheck
+          
+  # Security Scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -e .[dev,all]
+          
+      - name: Run security checks
+        run: npm run security-check
+        
+      - name: CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python
+          
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        
+  # Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    strategy:
+      matrix:
+        node-version: ['16', '18', '20']
+        python-version: ['3.9', '3.10', '3.11']
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -e .[dev,all]
+          
+      - name: Run JavaScript unit tests
+        run: npm run test:unit
+        
+      - name: Run Python unit tests
+        run: pytest quantum-tests/unit/ -v --cov=src/ --cov-report=term --cov-report=xml
+        
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-${{ matrix.python-version }}
+          
+  # Quantum Tests
+  quantum-tests:
+    name: Quantum Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install quantum dependencies
+        run: |
+          pip install -e .[dev,all]
+          pip install qiskit[visualization] cirq pennylane
+          
+      - name: Run quantum circuit tests
+        run: |
+          python -m pytest quantum-tests/examples/ -v \
+            --quantum-backend=qasm_simulator \
+            --max-shots=1000
+            
+      - name: Run noise-aware tests
+        run: |
+          python -m pytest quantum-tests/integration/ -v \
+            --quantum-backend=qasm_simulator \
+            --noise-model=ibmq_fake_manhattan
+            
+      - name: Generate quantum test report
+        run: |
+          python -m quantum_devops_ci.testing.cli report \
+            --output=quantum-test-report.json
+            
+      - name: Upload quantum test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: quantum-test-results
+          path: |
+            quantum-test-report.json
+            test-results/
+            
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -e .[dev,all]
+          
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          REDIS_URL: redis://localhost:6379
+          
+      - name: Run end-to-end quantum workflows
+        run: |
+          python -m pytest quantum-tests/integration/ -v \
+            --quantum-backend=qasm_simulator \
+            --test-type=e2e
+            
+  # Build and Package
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: [code-quality, security, unit-tests]
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -e .[dev,all]
+          pip install build twine
+          
+      - name: Build JavaScript package
+        run: npm run build
+        
+      - name: Build Python package
+        run: python -m build
+        
+      - name: Build Docker image
+        run: |
+          docker build -t quantum-devops-ci:${{ github.sha }} .
+          docker build -t quantum-devops-ci:latest .
+          
+      - name: Test Docker image
+        run: |
+          docker run --rm quantum-devops-ci:latest --version
+          docker run --rm quantum-devops-ci:latest quantum-test --help
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            *.tgz
+            
+  # Documentation
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev,all]
+          pip install sphinx sphinx-rtd-theme
+          
+      - name: Build documentation
+        run: npm run docs:build
+        
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/_build/html/
+          
+  # Final Status Check
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [code-quality, security, unit-tests, quantum-tests, integration-tests, build, docs]
+    if: always()
+    
+    steps:
+      - name: Check CI Status
+        run: |
+          if [[ "${{ needs.code-quality.result }}" != "success" ]]; then
+            echo "Code quality checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "Security checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
+            echo "Unit tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.quantum-tests.result }}" != "success" ]]; then
+            echo "Quantum tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.integration-tests.result }}" != "success" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "Build failed"
+            exit 1
+          fi
+          if [[ "${{ needs.docs.result }}" != "success" ]]; then
+            echo "Documentation build failed"
+            exit 1
+          fi
+          echo "All CI checks passed successfully!"
+          
+      - name: Post success comment
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ All CI checks passed! Ready for review.'
+            });
