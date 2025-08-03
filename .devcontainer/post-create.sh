@@ -1,74 +1,101 @@
 #!/bin/bash
-# Post-create script for quantum-devops-ci development container
-
 set -e
 
-echo "🚀 Setting up quantum-devops-ci development environment..."
+echo "🚀 Setting up Quantum DevOps CI/CD Development Environment..."
 
-# Update package lists
-sudo apt-get update
+# Update system packages
+echo "📦 Updating system packages..."
+sudo apt-get update && sudo apt-get upgrade -y
 
 # Install additional system dependencies
+echo "🔧 Installing system dependencies..."
 sudo apt-get install -y \
     build-essential \
-    cmake \
-    git \
     curl \
     wget \
+    git \
     vim \
     htop \
-    jq \
     tree \
-    graphviz \
-    pandoc
+    jq \
+    sqlite3 \
+    postgresql-client \
+    redis-tools
 
-# Set up Python environment
+# Setup Python environment
 echo "🐍 Setting up Python environment..."
-python -m pip install --upgrade pip setuptools wheel
+python3 -m pip install --upgrade pip setuptools wheel
 
-# Install Python dependencies
-if [ -f "pyproject.toml" ]; then
-    pip install -e ".[dev,all]"
-else
-    pip install -e .
-fi
+# Install project dependencies
+echo "📚 Installing project dependencies..."
+cd /workspace
 
-# Set up Node.js environment
-echo "📦 Setting up Node.js environment..."
+# Install Python package in development mode
+pip install -e .[dev,all]
+
+# Install Node.js dependencies
+echo "📦 Installing Node.js dependencies..."
 npm install
 
-# Set up pre-commit hooks
-echo "🪝 Installing pre-commit hooks..."
+# Setup pre-commit hooks
+echo "🪝 Setting up pre-commit hooks..."
 pre-commit install
 
-# Create useful directories
-mkdir -p logs temp quantum_results simulation_data benchmarks
+# Initialize database
+echo "🗄️ Initializing database..."
+python3 -c "
+from src.quantum_devops_ci.database.migrations import run_migrations
 
-# Set up aliases
+print('Running database migrations...')
+success = run_migrations()
+if success:
+    print('✅ Database initialized successfully')
+else:
+    print('❌ Database initialization failed')
+"
+
+# Create quantum configuration
+echo "⚙️ Creating quantum configuration..."
+mkdir -p ~/.quantum_devops_ci
+cat > ~/.quantum_devops_ci/config.yml << 'EOF'
+# Quantum DevOps CI/CD Configuration
+quantum_devops_ci:
+  version: '1.0.0'
+  environment: 'development'
+
+# Database configuration
+database:
+  type: 'sqlite'
+  path: '~/.quantum_devops_ci/quantum_devops.db'
+
+# Cache configuration  
+cache:
+  type: 'memory'
+  max_size: 1000
+
+# Testing configuration
+testing:
+  default_backend: 'qasm_simulator'
+  default_shots: 1000
+  timeout_seconds: 300
+  noise_simulation: true
+
+# Development settings
+development:
+  debug: true
+  auto_reload: true
+  verbose_logging: true
+EOF
+
+# Create development aliases
+echo "🔗 Creating development aliases..."
 cat >> ~/.bashrc << 'EOF'
-# Quantum DevOps CI aliases
-alias qd='quantum-devops'
-alias qt='quantum-test'
-alias ql='quantum-lint'
+
+# Quantum DevOps CI/CD aliases
+alias qtest='quantum-test run'
+alias qlint='quantum-lint check'
+
+echo "🚀 Quantum DevOps CI/CD Development Environment Ready!"
 EOF
-
-# Create welcome message
-cat > ~/.welcome.txt << 'EOF'
-⚛️  QUANTUM DEVOPS CI DEVELOPMENT ENVIRONMENT  ⚛️
-
-Welcome to your quantum-powered development container!
-
-🚀 Quick Start:
-  • Run tests: npm test
-  • Lint code: npm run lint
-  • Run quantum tests: quantum-test run
-
-Happy quantum coding! 🌟
-EOF
-
-echo "cat ~/.welcome.txt" >> ~/.bashrc
-
-# Set proper permissions
-chmod +x ~/.bashrc
 
 echo "✅ Development environment setup complete!"
