@@ -7,7 +7,7 @@ hardware providers, considering cost, time, and hardware constraints.
 
 import abc
 import warnings
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import heapq
@@ -379,7 +379,6 @@ class QuantumJobScheduler:
         }
         
         return result
-            self.backend_requirements = []
 
 
 @dataclass

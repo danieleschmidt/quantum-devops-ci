@@ -11,7 +11,7 @@ from .linting import QuantumLinter, PulseLinter
 from .scheduling import QuantumJobScheduler
 from .monitoring import QuantumCIMonitor
 from .cost import CostOptimizer
-from .deployment import QuantumABTest
+# from .deployment import QuantumABTest  # Temporarily commented out due to syntax error
 
 __version__ = "1.0.0"
 __author__ = "Quantum DevOps Community"
@@ -35,7 +35,7 @@ __all__ = [
     "QuantumCIMonitor",
     
     # Deployment and testing
-    "QuantumABTest",
+    # "QuantumABTest",  # Temporarily commented out
 ]
 
 # Framework compatibility check

@@ -9,7 +9,7 @@ validation.
 import abc
 import warnings
 from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import yaml
 

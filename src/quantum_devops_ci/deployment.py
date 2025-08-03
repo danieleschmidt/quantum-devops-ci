@@ -1104,7 +1104,7 @@ class QuantumABTest:
         return p_value
     
     def _calculate_effect_size(self, group_a: List[float], group_b: List[float]) -> float:
-        """Calculate Cohen's d effect size."""
+        """Calculate Cohen d effect size."""
         if not group_a or not group_b:
             return 0.0
         
