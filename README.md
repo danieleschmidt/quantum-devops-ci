@@ -743,9 +743,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bibtex
 @software{quantum_devops_ci,
   title={Quantum DevOps CI: Bringing Software Engineering to Quantum Computing},
-  author={Your Name},
+  author={Daniel Schmidt},
   year={2025},
-  url={https://github.com/yourusername/quantum-devops-ci}
+  url={https://github.com/danieleschmidt/quantum-devops-ci}
 }
 ```
 
