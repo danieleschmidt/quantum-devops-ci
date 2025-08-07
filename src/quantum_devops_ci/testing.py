@@ -7,9 +7,22 @@ under realistic noise conditions, supporting multiple quantum frameworks.
 
 import abc
 import warnings
+import logging
 from typing import Dict, List, Optional, Union, Any, Callable
 from dataclasses import dataclass
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    warnings.warn("numpy not available - some testing features will be limited")
+
+from .exceptions import (
+    TestExecutionError, NoiseModelError, BackendConnectionError,
+    CircuitValidationError, ResourceExhaustionError
+)
+from .validation import QuantumCircuitValidator, validate_inputs
+from .security import requires_auth, audit_action
 
 try:
     import pytest
@@ -81,6 +94,9 @@ class NoiseAwareTest(abc.ABC):
         self.timeout_seconds = timeout_seconds
         self.backend_cache = {}
     
+    @requires_auth('test.execute')
+    @audit_action('run_circuit', 'quantum_circuit')
+    @validate_inputs(shots=lambda x: x is None or QuantumCircuitValidator.validate_shots(x))
     def run_circuit(
         self, 
         circuit, 
@@ -99,18 +115,70 @@ class NoiseAwareTest(abc.ABC):
             
         Returns:
             TestResult with execution results
+            
+        Raises:
+            TestExecutionError: If circuit execution fails
+            CircuitValidationError: If circuit validation fails
+            BackendConnectionError: If backend connection fails
         """
-        if shots is None:
-            shots = self.default_shots
+        logger = logging.getLogger(__name__)
         
-        # Framework-specific execution
-        if QISKIT_AVAILABLE and hasattr(circuit, 'measure'):
-            return self._run_qiskit_circuit(circuit, shots, backend, **kwargs)
-        elif CIRQ_AVAILABLE and hasattr(circuit, 'moments'):
-            return self._run_cirq_circuit(circuit, shots, backend, **kwargs)
-        else:
-            raise NotImplementedError(f"Framework not supported for circuit type: {type(circuit)}")
+        try:
+            if shots is None:
+                shots = self.default_shots
+            
+            logger.info(f"Running circuit with {shots} shots on backend {backend}")
+            
+            # Validate circuit if it has expected attributes
+            if hasattr(circuit, 'num_qubits'):
+                try:
+                    QuantumCircuitValidator.validate_circuit_parameters(
+                        circuit.num_qubits, 
+                        len(getattr(circuit, 'data', [])),
+                        getattr(circuit, 'depth', lambda: 0)()
+                    )
+                except Exception as e:
+                    raise CircuitValidationError(f"Circuit validation failed: {e}")
+            
+            # Framework-specific execution with error handling
+            try:
+                if QISKIT_AVAILABLE and hasattr(circuit, 'measure'):
+                    result = self._run_qiskit_circuit(circuit, shots, backend, **kwargs)
+                elif CIRQ_AVAILABLE and hasattr(circuit, 'moments'):
+                    result = self._run_cirq_circuit(circuit, shots, backend, **kwargs)
+                else:
+                    raise TestExecutionError(f"Framework not supported for circuit type: {type(circuit)}")
+                
+                logger.info(f"Circuit execution completed successfully in {result.execution_time:.2f}s")
+                return result
+                
+            except Exception as e:
+                if isinstance(e, (TestExecutionError, CircuitValidationError)):
+                    raise
+                
+                # Check if it's a resource/timeout issue
+                if 'timeout' in str(e).lower() or 'memory' in str(e).lower():
+                    raise ResourceExhaustionError(f"Resource exhaustion during execution: {e}")
+                
+                # Check if it's a backend connection issue
+                if 'connection' in str(e).lower() or 'network' in str(e).lower():
+                    raise BackendConnectionError(f"Backend connection failed: {e}")
+                
+                raise TestExecutionError(f"Circuit execution failed: {e}", details={
+                    'backend': backend,
+                    'shots': shots,
+                    'circuit_type': type(circuit).__name__
+                })
+                
+        except Exception as e:
+            logger.error(f"Unexpected error in run_circuit: {e}")
+            if isinstance(e, (TestExecutionError, CircuitValidationError, BackendConnectionError, ResourceExhaustionError)):
+                raise
+            raise TestExecutionError(f"Unexpected error during circuit execution: {e}")
     
+    @requires_auth('test.execute')
+    @audit_action('run_with_noise', 'quantum_circuit')
+    @validate_inputs(shots=lambda x: x is None or QuantumCircuitValidator.validate_shots(x))
     def run_with_noise(
         self,
         circuit,
@@ -129,16 +197,48 @@ class NoiseAwareTest(abc.ABC):
             
         Returns:
             TestResult with noisy execution results
+            
+        Raises:
+            TestExecutionError: If circuit execution fails
+            NoiseModelError: If noise model is invalid
+            CircuitValidationError: If circuit validation fails
         """
-        if shots is None:
-            shots = self.default_shots
+        logger = logging.getLogger(__name__)
         
-        # Framework-specific noisy execution
-        if QISKIT_AVAILABLE and hasattr(circuit, 'measure'):
-            return self._run_qiskit_noisy(circuit, noise_model, shots, **kwargs)
-        elif CIRQ_AVAILABLE and hasattr(circuit, 'moments'):
-            return self._run_cirq_noisy(circuit, noise_model, shots, **kwargs)
-        else:
+        try:
+            if shots is None:
+                shots = self.default_shots
+            
+            logger.info(f"Running noisy circuit with {shots} shots, noise model: {noise_model}")
+            
+            # Validate noise model
+            if isinstance(noise_model, str) and not noise_model.strip():
+                raise NoiseModelError("Noise model name cannot be empty")
+            
+            # Framework-specific noisy execution with error handling
+            try:
+                if QISKIT_AVAILABLE and hasattr(circuit, 'measure'):
+                    result = self._run_qiskit_noisy(circuit, noise_model, shots, **kwargs)
+                elif CIRQ_AVAILABLE and hasattr(circuit, 'moments'):
+                    result = self._run_cirq_noisy(circuit, noise_model, shots, **kwargs)
+                else:
+                    raise TestExecutionError(f"Framework not supported for circuit type: {type(circuit)}")
+                
+                logger.info(f"Noisy circuit execution completed in {result.execution_time:.2f}s")
+                return result
+                
+            except NoiseModelError:
+                raise
+            except Exception as e:
+                if 'noise' in str(e).lower():
+                    raise NoiseModelError(f"Noise model error: {e}")
+                raise TestExecutionError(f"Noisy circuit execution failed: {e}")
+                
+        except Exception as e:
+            logger.error(f"Error in run_with_noise: {e}")
+            if isinstance(e, (TestExecutionError, NoiseModelError, CircuitValidationError)):
+                raise
+            raise TestExecutionError(f"Unexpected error during noisy execution: {e}")
             raise NotImplementedError(f"Noisy simulation not supported for: {type(circuit)}")
     
     def run_with_noise_sweep(

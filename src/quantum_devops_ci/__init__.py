@@ -6,12 +6,47 @@ and CI/CD integration for quantum computing workflows compatible with Qiskit,
 Cirq, PennyLane, and other quantum frameworks.
 """
 
-from .testing import NoiseAwareTest, quantum_fixture
-from .linting import QuantumLinter, PulseLinter
-from .scheduling import QuantumJobScheduler
-from .monitoring import QuantumCIMonitor
-from .cost import CostOptimizer
-from .deployment import QuantumABTest
+# Import only stable modules for now
+from .exceptions import *
+from .validation import SecurityValidator, ConfigValidator, QuantumCircuitValidator
+from .security import SecurityContext, SecurityManager
+from .caching import MemoryCache, DiskCache, MultiLevelCache, CacheManager
+
+# Optional imports with fallbacks
+try:
+    from .testing import NoiseAwareTest
+except ImportError:
+    NoiseAwareTest = None
+
+try:
+    from .linting import QuantumLinter, PulseLinter
+except ImportError:
+    QuantumLinter = PulseLinter = None
+
+try:
+    from .scheduling import QuantumJobScheduler
+except ImportError:
+    QuantumJobScheduler = None
+
+try:
+    from .monitoring import QuantumCIMonitor
+except ImportError:
+    QuantumCIMonitor = None
+
+try:
+    from .cost import CostOptimizer
+except ImportError:
+    CostOptimizer = None
+
+try:
+    from .concurrency import ConcurrentExecutor
+except ImportError:
+    ConcurrentExecutor = None
+
+try:
+    from .autoscaling import AutoScalingManager
+except ImportError:
+    AutoScalingManager = None
 
 __version__ = "1.0.0"
 __author__ = "Quantum DevOps Community"
