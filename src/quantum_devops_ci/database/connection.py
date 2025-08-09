@@ -131,4 +131,171 @@ class DatabaseConnection:
     def _get_sqlite_connection(self):
         """Get SQLite connection."""
         # Use thread-local storage for SQLite connections
-        if not hasattr(self._local_storage, 'connection'):\n            connection = sqlite3.connect(\n                self.config.database_name,\n                timeout=self.config.timeout,\n                check_same_thread=False\n            )\n            connection.row_factory = sqlite3.Row  # Enable dict-like access\n            self._local_storage.connection = connection\n        \n        return self._local_storage.connection\n    \n    def _get_postgresql_connection(self):\n        \"\"\"Get PostgreSQL connection from pool.\"\"\"\n        if not POSTGRES_AVAILABLE:\n            raise ImportError(\"psycopg2 not available for PostgreSQL connections\")\n        \n        self._initialize_pool()\n        return self._connection_pool.getconn()\n    \n    def _get_mysql_connection(self):\n        \"\"\"Get MySQL connection.\"\"\"\n        if not MYSQL_AVAILABLE:\n            raise ImportError(\"mysql-connector not available for MySQL connections\")\n        \n        return mysql.connector.connect(\n            host=self.config.host,\n            port=self.config.port,\n            user=self.config.username,\n            password=self.config.password,\n            database=self.config.database_name,\n            autocommit=True\n        )\n    \n    def return_connection(self, connection):\n        \"\"\"Return connection to pool (for PostgreSQL).\"\"\"\n        if self.config.database_type == \"postgresql\" and self._connection_pool:\n            self._connection_pool.putconn(connection)\n        elif self.config.database_type in [\"sqlite\", \"mysql\"]:\n            # For SQLite (thread-local) and MySQL, we keep connections open\n            pass\n    \n    @contextmanager\n    def get_session(self):\n        \"\"\"Get database session with automatic cleanup.\"\"\"\n        connection = self.get_connection()\n        try:\n            yield connection\n            if hasattr(connection, 'commit'):\n                connection.commit()\n        except Exception as e:\n            if hasattr(connection, 'rollback'):\n                connection.rollback()\n            raise\n        finally:\n            self.return_connection(connection)\n    \n    def execute_query(self, query: str, params: Optional[tuple] = None) -> list:\n        \"\"\"Execute SELECT query and return results.\"\"\"\n        with self.get_session() as conn:\n            cursor = conn.cursor()\n            cursor.execute(query, params or ())\n            \n            if self.config.database_type == \"sqlite\":\n                # SQLite with Row factory returns dict-like objects\n                return [dict(row) for row in cursor.fetchall()]\n            else:\n                # For other databases, get column names and create dicts\n                columns = [desc[0] for desc in cursor.description]\n                return [dict(zip(columns, row)) for row in cursor.fetchall()]\n    \n    def execute_command(self, command: str, params: Optional[tuple] = None) -> int:\n        \"\"\"Execute INSERT/UPDATE/DELETE command and return affected rows.\"\"\"\n        with self.get_session() as conn:\n            cursor = conn.cursor()\n            cursor.execute(command, params or ())\n            return cursor.rowcount\n    \n    def execute_script(self, script: str):\n        \"\"\"Execute SQL script (multiple statements).\"\"\"\n        with self.get_session() as conn:\n            if self.config.database_type == \"sqlite\":\n                conn.executescript(script)\n            else:\n                # For other databases, split and execute statements\n                statements = [stmt.strip() for stmt in script.split(';') if stmt.strip()]\n                cursor = conn.cursor()\n                for statement in statements:\n                    cursor.execute(statement)\n    \n    def table_exists(self, table_name: str) -> bool:\n        \"\"\"Check if table exists in database.\"\"\"\n        if self.config.database_type == \"sqlite\":\n            query = \"SELECT name FROM sqlite_master WHERE type='table' AND name=?\"\n        elif self.config.database_type == \"postgresql\":\n            query = \"SELECT tablename FROM pg_tables WHERE tablename=%s\"\n        elif self.config.database_type == \"mysql\":\n            query = \"SELECT table_name FROM information_schema.tables WHERE table_name=%s AND table_schema=DATABASE()\"\n        else:\n            return False\n        \n        results = self.execute_query(query, (table_name,))\n        return len(results) > 0\n    \n    def get_table_schema(self, table_name: str) -> Dict[str, Any]:\n        \"\"\"Get table schema information.\"\"\"\n        if self.config.database_type == \"sqlite\":\n            query = f\"PRAGMA table_info({table_name})\"\n            results = self.execute_query(query)\n            return {\n                'columns': [\n                    {\n                        'name': row['name'],\n                        'type': row['type'],\n                        'nullable': not row['notnull'],\n                        'primary_key': bool(row['pk'])\n                    }\n                    for row in results\n                ]\n            }\n        else:\n            # For other databases, would need specific schema queries\n            warnings.warn(f\"Schema inspection not implemented for {self.config.database_type}\")\n            return {'columns': []}\n    \n    def close(self):\n        \"\"\"Close database connections.\"\"\"\n        if hasattr(self._local_storage, 'connection'):\n            self._local_storage.connection.close()\n            delattr(self._local_storage, 'connection')\n        \n        if self._connection_pool:\n            self._connection_pool.closeall()\n            self._connection_pool = None\n\n\n# Global connection instance\n_global_connection: Optional[DatabaseConnection] = None\n_connection_lock = threading.Lock()\n\n\ndef get_connection(config: Optional[DatabaseConfig] = None) -> DatabaseConnection:\n    \"\"\"Get global database connection instance.\"\"\"\n    global _global_connection\n    \n    if _global_connection is None:\n        with _connection_lock:\n            if _global_connection is None:\n                _global_connection = DatabaseConnection(config)\n    \n    return _global_connection\n\n\ndef close_connection():\n    \"\"\"Close global database connection.\"\"\"\n    global _global_connection\n    \n    if _global_connection is not None:\n        with _connection_lock:\n            if _global_connection is not None:\n                _global_connection.close()\n                _global_connection = None
+        if not hasattr(self._local_storage, 'connection') or self._local_storage.connection is None:
+            try:
+                connection = sqlite3.connect(
+                    self.config.database_name,
+                    timeout=self.config.timeout,
+                    check_same_thread=False
+                )
+                connection.row_factory = sqlite3.Row  # Enable dict-like access
+                # Enable foreign keys and WAL mode for better performance
+                connection.execute("PRAGMA foreign_keys = ON")
+                connection.execute("PRAGMA journal_mode = WAL")
+                connection.commit()
+                self._local_storage.connection = connection
+            except sqlite3.Error as e:
+                raise RuntimeError(f"Failed to connect to SQLite database: {e}")
+        
+        return self._local_storage.connection
+    
+    def _get_postgresql_connection(self):
+        """Get PostgreSQL connection from pool."""
+        if not POSTGRES_AVAILABLE:
+            raise ImportError("psycopg2 not available for PostgreSQL connections")
+        
+        self._initialize_pool()
+        return self._connection_pool.getconn()
+    
+    def _get_mysql_connection(self):
+        """Get MySQL connection."""
+        if not MYSQL_AVAILABLE:
+            raise ImportError("mysql-connector not available for MySQL connections")
+        
+        return mysql.connector.connect(
+            host=self.config.host,
+            port=self.config.port,
+            user=self.config.username,
+            password=self.config.password,
+            database=self.config.database_name,
+            autocommit=True
+        )
+    
+    def return_connection(self, connection):
+        """Return connection to pool (for PostgreSQL)."""
+        if self.config.database_type == "postgresql" and self._connection_pool:
+            self._connection_pool.putconn(connection)
+        elif self.config.database_type in ["sqlite", "mysql"]:
+            # For SQLite (thread-local) and MySQL, we keep connections open
+            pass
+    
+    @contextmanager
+    def get_session(self):
+        """Get database session with automatic cleanup."""
+        connection = self.get_connection()
+        try:
+            yield connection
+            if hasattr(connection, 'commit'):
+                connection.commit()
+        except Exception as e:
+            if hasattr(connection, 'rollback'):
+                connection.rollback()
+            raise
+        finally:
+            self.return_connection(connection)
+    
+    def execute_query(self, query: str, params: Optional[tuple] = None) -> list:
+        """Execute SELECT query and return results."""
+        with self.get_session() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params or ())
+            
+            if self.config.database_type == "sqlite":
+                # SQLite with Row factory returns dict-like objects
+                return [dict(row) for row in cursor.fetchall()]
+            else:
+                # For other databases, get column names and create dicts
+                columns = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    def execute_command(self, command: str, params: Optional[tuple] = None) -> int:
+        """Execute INSERT/UPDATE/DELETE command and return affected rows."""
+        with self.get_session() as conn:
+            cursor = conn.cursor()
+            cursor.execute(command, params or ())
+            return cursor.rowcount
+    
+    def execute_script(self, script: str):
+        """Execute SQL script (multiple statements)."""
+        with self.get_session() as conn:
+            if self.config.database_type == "sqlite":
+                conn.executescript(script)
+            else:
+                # For other databases, split and execute statements
+                statements = [stmt.strip() for stmt in script.split(';') if stmt.strip()]
+                cursor = conn.cursor()
+                for statement in statements:
+                    cursor.execute(statement)
+    
+    def table_exists(self, table_name: str) -> bool:
+        """Check if table exists in database."""
+        if self.config.database_type == "sqlite":
+            query = "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+        elif self.config.database_type == "postgresql":
+            query = "SELECT tablename FROM pg_tables WHERE tablename=%s"
+        elif self.config.database_type == "mysql":
+            query = "SELECT table_name FROM information_schema.tables WHERE table_name=%s AND table_schema=DATABASE()"
+        else:
+            return False
+        
+        results = self.execute_query(query, (table_name,))
+        return len(results) > 0
+    
+    def get_table_schema(self, table_name: str) -> Dict[str, Any]:
+        """Get table schema information."""
+        if self.config.database_type == "sqlite":
+            query = f"PRAGMA table_info({table_name})"
+            results = self.execute_query(query)
+            return {
+                'columns': [
+                    {
+                        'name': row['name'],
+                        'type': row['type'],
+                        'nullable': not row['notnull'],
+                        'primary_key': bool(row['pk'])
+                    }
+                    for row in results
+                ]
+            }
+        else:
+            # For other databases, would need specific schema queries
+            warnings.warn(f"Schema inspection not implemented for {self.config.database_type}")
+            return {'columns': []}
+    
+    def close(self):
+        """Close database connections."""
+        if hasattr(self._local_storage, 'connection'):
+            self._local_storage.connection.close()
+            delattr(self._local_storage, 'connection')
+        
+        if self._connection_pool:
+            self._connection_pool.closeall()
+            self._connection_pool = None
+
+
+# Global connection instance
+_global_connection: Optional[DatabaseConnection] = None
+_connection_lock = threading.Lock()
+
+
+def get_connection(config: Optional[DatabaseConfig] = None) -> DatabaseConnection:
+    """Get global database connection instance."""
+    global _global_connection
+    
+    if _global_connection is None:
+        with _connection_lock:
+            if _global_connection is None:
+                _global_connection = DatabaseConnection(config)
+    
+    return _global_connection
+
+
+def close_connection():
+    """Close global database connection."""
+    global _global_connection
+    
+    if _global_connection is not None:
+        with _connection_lock:
+            if _global_connection is not None:
+                _global_connection.close()
+                _global_connection = None

@@ -51,23 +51,29 @@ class BaseModel(ABC):
 
 @dataclass
 class BuildRecord(BaseModel):
-    """Build record model."""
+    """Model for build/CI records."""
     commit_hash: str = ""
     branch: str = ""
     build_number: Optional[int] = None
-    status: str = "pending"
+    status: str = "pending"  # pending, running, success, failed
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     duration_seconds: Optional[float] = None
+    
+    # Quantum-specific metrics
     circuit_count: int = 0
     total_gates: int = 0
     max_circuit_depth: int = 0
     estimated_fidelity: float = 0.0
+    
+    # Test results
     tests_total: int = 0
     tests_passed: int = 0
     tests_failed: int = 0
     noise_tests_passed: int = 0
     noise_tests_total: int = 0
+    
+    # Metadata
     framework: str = ""
     backend: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -78,7 +84,7 @@ class BuildRecord(BaseModel):
     
     @classmethod
     def create_table_sql(cls) -> str:
-        return """
+        return \"\"\"
         CREATE TABLE IF NOT EXISTS build_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             commit_hash TEXT NOT NULL,
@@ -103,24 +109,34 @@ class BuildRecord(BaseModel):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
+        \"\"\"
 
 
 @dataclass
 class HardwareUsageRecord(BaseModel):
-    """Hardware usage record model."""
+    """Model for quantum hardware usage records."""
     job_id: str = ""
     provider: str = ""
     backend: str = ""
+    
+    # Usage metrics
     shots: int = 0
     circuit_depth: Optional[int] = None
     num_qubits: Optional[int] = None
+    
+    # Timing
     queue_time_minutes: float = 0.0
     execution_time_minutes: float = 0.0
+    
+    # Cost
     cost_usd: float = 0.0
     cost_currency: str = "USD"
+    
+    # Results
     success: bool = True
     error_message: Optional[str] = None
+    
+    # Metadata
     build_id: Optional[int] = None
     experiment_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -131,7 +147,7 @@ class HardwareUsageRecord(BaseModel):
     
     @classmethod
     def create_table_sql(cls) -> str:
-        return """
+        return \"\"\"
         CREATE TABLE IF NOT EXISTS hardware_usage_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             job_id TEXT NOT NULL,
@@ -152,28 +168,40 @@ class HardwareUsageRecord(BaseModel):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
+        \"\"\"
 
 
 @dataclass
 class TestResult(BaseModel):
-    """Test result model."""
+    """Model for quantum test results."""
     test_name: str = ""
     test_class: str = ""
     test_file: str = ""
-    status: str = "pending"
+    
+    # Test execution
+    status: str = "pending"  # pending, running, passed, failed, skipped
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     duration_seconds: float = 0.0
+    
+    # Quantum-specific results
     framework: str = ""
     backend: str = ""
     shots: int = 0
     fidelity: Optional[float] = None
     error_rate: Optional[float] = None
+    
+    # Results data
     measurement_counts: Dict[str, int] = field(default_factory=dict)
+    
+    # Error info
     error_message: Optional[str] = None
     error_traceback: Optional[str] = None
+    
+    # Associations
     build_id: Optional[int] = None
+    
+    # Metadata
     noise_model: Optional[str] = None
     optimization_level: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -184,7 +212,7 @@ class TestResult(BaseModel):
     
     @classmethod
     def create_table_sql(cls) -> str:
-        return """
+        return \"\"\"
         CREATE TABLE IF NOT EXISTS test_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             test_name TEXT NOT NULL,
@@ -209,26 +237,36 @@ class TestResult(BaseModel):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
+        \"\"\"
 
 
 @dataclass
 class CostRecord(BaseModel):
-    """Cost record model."""
+    """Model for cost tracking records."""
     provider: str = ""
-    service: str = ""
-    resource_type: str = ""
+    service: str = ""  # quantum_computing, storage, data_transfer, etc.
+    resource_type: str = ""  # shots, minutes, GB, etc.
+    
+    # Usage
     quantity: float = 0.0
     unit_cost: float = 0.0
     total_cost: float = 0.0
     currency: str = "USD"
+    
+    # Time period
     billing_period_start: Optional[datetime] = None
     billing_period_end: Optional[datetime] = None
+    
+    # Associations
     build_id: Optional[int] = None
     job_id: Optional[str] = None
+    
+    # Categorization
     project: str = ""
-    environment: str = ""
+    environment: str = ""  # development, staging, production
     cost_center: str = ""
+    
+    # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     @classmethod
@@ -237,7 +275,7 @@ class CostRecord(BaseModel):
     
     @classmethod
     def create_table_sql(cls) -> str:
-        return """
+        return \"\"\"
         CREATE TABLE IF NOT EXISTS cost_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             provider TEXT NOT NULL,
@@ -258,31 +296,43 @@ class CostRecord(BaseModel):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
+        \"\"\"
 
 
 @dataclass
 class JobRecord(BaseModel):
-    """Job record model."""
+    """Model for quantum job records."""
     job_id: str = ""
     algorithm_id: str = ""
+    
+    # Job configuration
     provider: str = ""
     backend: str = ""
     shots: int = 0
-    priority: str = "medium"
-    status: str = "pending"
+    priority: str = "medium"  # low, medium, high, critical
+    
+    # Scheduling
+    status: str = "pending"  # pending, queued, running, completed, failed, cancelled
     scheduled_time: Optional[datetime] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    
+    # Results
     success: bool = False
     result_data: Dict[str, Any] = field(default_factory=dict)
     error_message: Optional[str] = None
+    
+    # Cost and performance
     estimated_cost: float = 0.0
     actual_cost: float = 0.0
     queue_time_minutes: float = 0.0
     execution_time_minutes: float = 0.0
+    
+    # Associations
     build_id: Optional[int] = None
     deployment_id: Optional[str] = None
+    
+    # Metadata
     circuit_hash: Optional[str] = None
     optimization_level: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -293,7 +343,7 @@ class JobRecord(BaseModel):
     
     @classmethod
     def create_table_sql(cls) -> str:
-        return """
+        return \"\"\"
         CREATE TABLE IF NOT EXISTS job_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             job_id TEXT NOT NULL UNIQUE,
@@ -321,35 +371,40 @@ class JobRecord(BaseModel):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
+        \"\"\"
 
 
-# Utility functions for JSON serialization
+# Helper functions for JSON serialization
 def serialize_dict(data: Dict[str, Any]) -> str:
-    """Serialize dictionary to JSON string."""
-    if not data:
-        return "{}"
+    """Serialize dictionary to JSON string for database storage."""
     return json.dumps(data, default=str)
 
 
-def deserialize_dict(data: str) -> Dict[str, Any]:
-    """Deserialize JSON string to dictionary."""
-    if not data or data == "{}":
-        return {}
+def deserialize_dict(json_str: str) -> Dict[str, Any]:
+    """Deserialize JSON string from database to dictionary."""
     try:
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError):
+        return json.loads(json_str) if json_str else {}
+    except json.JSONDecodeError:
         return {}
 
 
-def create_all_tables() -> List[str]:
-    """Get SQL statements to create all tables."""
-    model_classes = [
-        BuildRecord,
-        HardwareUsageRecord,
-        TestResult,
-        CostRecord,
-        JobRecord
-    ]
-    
-    return [model_class.create_table_sql() for model_class in model_classes]
+# Model registry for dynamic table creation
+MODEL_REGISTRY = [
+    BuildRecord,
+    HardwareUsageRecord,
+    TestResult,
+    CostRecord,
+    JobRecord
+]
+
+
+def get_all_models() -> List[type]:
+    """Get all registered model classes."""
+    return MODEL_REGISTRY
+
+
+def create_all_tables(connection) -> None:
+    """Create all model tables in the database."""
+    for model_class in MODEL_REGISTRY:
+        sql = model_class.create_table_sql()
+        connection.execute_script(sql)
