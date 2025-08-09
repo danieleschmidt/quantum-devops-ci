@@ -1,3 +1,4 @@
+```python
 #!/usr/bin/env python3
 """
 Generation 2 Demonstration: Robustness and Provider Integration
@@ -405,3 +406,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+```
