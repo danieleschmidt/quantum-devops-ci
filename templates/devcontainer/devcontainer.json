@@ -1,0 +1,73 @@
+{
+  "name": "Quantum Development Environment",
+  "image": "quantum-devops/devcontainer:latest",
+  "features": {
+    "quantum-frameworks": {
+      "qiskit": "0.45",
+      "cirq": "1.3",
+      "pennylane": "0.33"
+    },
+    "simulators": {
+      "qiskit-aer": true,
+      "cirq-qsim": true,
+      "gpu-acceleration": true
+    },
+    "analysis-tools": {
+      "jupyter": true,
+      "quantum-visualization": true,
+      "pulse-designer": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "quantum-devops.quantum-lint",
+        "quantum-devops.circuit-visualizer",
+        "quantum-devops.pulse-designer",
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "GitHub.copilot",
+        "ms-python.flake8",
+        "ms-python.black-formatter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": true,
+        "python.formatting.provider": "black",
+        "jupyter.askForKernelRestart": false,
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "postCreateCommand": "quantum-devops setup-workspace",
+  "forwardPorts": [8000, 8080, 8888],
+  "portsAttributes": {
+    "8000": {
+      "label": "Quantum Dashboard",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "API Server",
+      "onAutoForward": "silent"
+    },
+    "8888": {
+      "label": "Jupyter Lab",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/.quantum-cache,target=/workspace/.quantum-cache,type=bind",
+    "source=${localWorkspaceFolder}/data,target=/workspace/data,type=bind"
+  ],
+  "containerEnv": {
+    "QUANTUM_DEVOPS_ENV": "development",
+    "PYTHONPATH": "/workspace/src",
+    "QUANTUM_CACHE_DIR": "/workspace/.quantum-cache"
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": true,
+  "shutdownAction": "stopContainer",
+  "overrideCommand": true
+}

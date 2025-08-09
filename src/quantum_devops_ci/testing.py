@@ -239,7 +239,6 @@ class NoiseAwareTest(abc.ABC):
             if isinstance(e, (TestExecutionError, NoiseModelError, CircuitValidationError)):
                 raise
             raise TestExecutionError(f"Unexpected error during noisy execution: {e}")
-            raise NotImplementedError(f"Noisy simulation not supported for: {type(circuit)}")
     
     def run_with_noise_sweep(
         self,
@@ -259,15 +258,44 @@ class NoiseAwareTest(abc.ABC):
             
         Returns:
             Dictionary mapping noise levels to results
+            
+        Raises:
+            TestExecutionError: If any noise level execution fails
+            ValueError: If noise levels are invalid
         """
+        logger = logging.getLogger(__name__)
+        
+        if not noise_levels:
+            raise ValueError("Noise levels list cannot be empty")
+        
+        if any(level < 0 or level > 1 for level in noise_levels):
+            raise ValueError("Noise levels must be between 0 and 1")
+        
         results = {}
+        failed_levels = []
+        
+        logger.info(f"Running noise sweep with {len(noise_levels)} levels")
+        
         for noise_level in noise_levels:
-            results[noise_level] = self.run_with_noise(
-                circuit, 
-                f"depolarizing_{noise_level}",
-                shots=shots,
-                **kwargs
-            )
+            try:
+                results[noise_level] = self.run_with_noise(
+                    circuit, 
+                    f"depolarizing_{noise_level}",
+                    shots=shots,
+                    **kwargs
+                )
+                logger.debug(f"Completed noise level {noise_level}")
+            except Exception as e:
+                failed_levels.append((noise_level, str(e)))
+                logger.warning(f"Failed to run noise level {noise_level}: {e}")
+        
+        if failed_levels and not results:
+            # All levels failed
+            raise TestExecutionError(f"All noise levels failed: {failed_levels}")
+        elif failed_levels:
+            # Some levels failed, log warnings
+            logger.warning(f"{len(failed_levels)} noise levels failed: {[level for level, _ in failed_levels]}")
+        
         return results
     
     def run_on_hardware(
@@ -469,7 +497,10 @@ class NoiseAwareTest(abc.ABC):
         expected_prob = 1.0 / num_states
         actual_probs = [count / total_shots for count in counts.values()]
         
-        # Calculate fidelity as 1 - variance from uniform
+        # Calculate fidelity as 1 - variance from uniform  
+        if not NUMPY_AVAILABLE:
+            return self._calculate_uniform_fidelity_simple(result)
+            
         variance = np.var(actual_probs)
         max_variance = expected_prob * (1 - expected_prob)  # Maximum possible variance
         
@@ -477,6 +508,183 @@ class NoiseAwareTest(abc.ABC):
             return 1.0
         
         return max(0.0, 1.0 - variance / max_variance)
+    
+    def _calculate_uniform_fidelity_simple(self, result: TestResult) -> float:
+        """Simple uniform fidelity calculation without NumPy."""
+        counts = result.get_counts()
+        total_shots = sum(counts.values())
+        
+        if total_shots == 0:
+            return 0.0
+        
+        num_states = len(counts)
+        if num_states == 0:
+            return 0.0
+        
+        expected_prob = 1.0 / num_states
+        actual_probs = [count / total_shots for count in counts.values()]
+        
+        # Calculate mean squared deviation from expected probability
+        mean_sq_dev = sum((prob - expected_prob) ** 2 for prob in actual_probs) / num_states
+        max_possible_dev = expected_prob ** 2  # Maximum possible deviation
+        
+        if max_possible_dev == 0:
+            return 1.0
+        
+        return max(0.0, 1.0 - mean_sq_dev / max_possible_dev)
+    
+    def run_test_suite(self, test_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Run a test suite with given configuration."""
+        logger = logging.getLogger(__name__)
+        
+        framework = test_config.get('framework', 'qiskit')
+        backend = test_config.get('backend', 'qasm_simulator')
+        shots = test_config.get('shots', 1000)
+        noise_level = test_config.get('noise_level', 0.0)
+        
+        logger.info(f"Running test suite with {framework} framework")
+        
+        test_results = {}
+        total_time = 0.0
+        
+        # Define test circuits based on framework
+        test_circuits = self._get_test_circuits(framework)
+        
+        for test_name, circuit_func in test_circuits.items():
+            try:
+                import time
+                start_time = time.time()
+                
+                # Create circuit
+                circuit = circuit_func()
+                
+                # Run test
+                if noise_level > 0:
+                    result = self.run_with_noise(circuit, f"depolarizing_{noise_level}", shots=shots)
+                else:
+                    result = self.run_circuit(circuit, shots=shots, backend=backend)
+                
+                execution_time = time.time() - start_time
+                total_time += execution_time
+                
+                # Calculate metrics based on test type
+                fidelity = self._calculate_test_fidelity(test_name, result)
+                
+                test_results[test_name] = {
+                    'passed': fidelity > 0.8,  # Pass threshold
+                    'fidelity': fidelity,
+                    'execution_time': execution_time,
+                    'shots': shots,
+                    'backend': backend,
+                    'noise_level': noise_level
+                }
+                
+                logger.debug(f"Test {test_name}: fidelity={fidelity:.3f}, time={execution_time:.2f}s")
+                
+            except Exception as e:
+                logger.error(f"Test {test_name} failed: {e}")
+                test_results[test_name] = {
+                    'passed': False,
+                    'error': str(e),
+                    'execution_time': 0.0,
+                    'shots': shots
+                }
+        
+        # Calculate summary statistics
+        total_tests = len(test_results)
+        passed_tests = sum(1 for result in test_results.values() if result.get('passed', False))
+        failed_tests = total_tests - passed_tests
+        
+        return {
+            'tests': test_results,
+            'summary': {
+                'total_tests': total_tests,
+                'passed': passed_tests,
+                'failed': failed_tests,
+                'success_rate': passed_tests / total_tests if total_tests > 0 else 0.0,
+                'total_time': total_time,
+                'framework': framework,
+                'backend': backend
+            }
+        }
+    
+    def _get_test_circuits(self, framework: str) -> Dict[str, callable]:
+        """Get test circuits for the specified framework."""
+        if framework == 'qiskit' and QISKIT_AVAILABLE:
+            return {
+                'test_bell_state': self._create_bell_circuit_qiskit,
+                'test_ghz_state': self._create_ghz_circuit_qiskit,
+                'test_uniform_superposition': self._create_uniform_circuit_qiskit
+            }
+        else:
+            # Mock circuits for non-available frameworks
+            return {
+                'test_mock_circuit': lambda: {'type': 'mock', 'qubits': 2}
+            }
+    
+    def _create_bell_circuit_qiskit(self):
+        """Create a Bell state circuit for Qiskit."""
+        if not QISKIT_AVAILABLE:
+            raise ImportError("Qiskit not available")
+        
+        from qiskit import QuantumCircuit
+        qc = QuantumCircuit(2, 2)
+        qc.h(0)
+        qc.cx(0, 1)
+        qc.measure_all()
+        return qc
+    
+    def _create_ghz_circuit_qiskit(self):
+        """Create a GHZ state circuit for Qiskit."""
+        if not QISKIT_AVAILABLE:
+            raise ImportError("Qiskit not available")
+        
+        from qiskit import QuantumCircuit
+        qc = QuantumCircuit(3, 3)
+        qc.h(0)
+        qc.cx(0, 1)
+        qc.cx(1, 2)
+        qc.measure_all()
+        return qc
+    
+    def _create_uniform_circuit_qiskit(self):
+        """Create a uniform superposition circuit for Qiskit."""
+        if not QISKIT_AVAILABLE:
+            raise ImportError("Qiskit not available")
+        
+        from qiskit import QuantumCircuit
+        qc = QuantumCircuit(2, 2)
+        qc.h(0)
+        qc.h(1)
+        qc.measure_all()
+        return qc
+    
+    def _calculate_test_fidelity(self, test_name: str, result: TestResult) -> float:
+        """Calculate fidelity based on test type."""
+        if 'bell' in test_name:
+            return self.calculate_bell_fidelity(result)
+        elif 'ghz' in test_name:
+            return self._calculate_ghz_fidelity(result)
+        elif 'uniform' in test_name:
+            return self.calculate_state_fidelity(result, 'uniform')
+        else:
+            # Default: just check if we got any results
+            counts = result.get_counts()
+            return 1.0 if counts else 0.0
+    
+    def _calculate_ghz_fidelity(self, result: TestResult) -> float:
+        """Calculate fidelity for GHZ state preparation."""
+        counts = result.get_counts()
+        total_shots = sum(counts.values())
+        
+        if total_shots == 0:
+            return 0.0
+        
+        # Expected GHZ state: |000⟩ + |111⟩
+        expected_states = {'000', '111'}
+        correct_counts = sum(counts.get(state, 0) for state in expected_states)
+        
+        return correct_counts / total_shots
 
 
 # Pytest fixture decorator

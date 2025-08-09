@@ -95,3 +95,13 @@ class AuthenticationError(QuantumDevOpsError):
 class AuthorizationError(QuantumDevOpsError):
     """Raised when authorization fails."""
     pass
+
+
+class DeploymentError(QuantumDevOpsError):
+    """Raised when deployment operations fail."""
+    pass
+
+
+class ValidationError(QuantumDevOpsError):
+    """Raised when validation fails."""
+    pass
