@@ -13,7 +13,9 @@ from pathlib import Path
 from .exceptions import (
     ConfigurationError, 
     CircuitValidationError, 
-    SecurityError
+    SecurityError,
+    ValidationError,
+    ResourceExhaustionError
 )
 
 

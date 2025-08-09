@@ -41,6 +41,12 @@ Examples:
     # Create subparsers for different commands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
+    # Init command
+    init_parser = subparsers.add_parser('init', help='Initialize quantum DevOps CI/CD')
+    init_parser.add_argument('--database', help='Database type (sqlite, postgresql, mysql)')
+    init_parser.add_argument('--force', action='store_true', help='Force overwrite existing configuration')
+    init_parser.add_argument('--config-file', help='Path to configuration file')
+    
     # Test command
     test_parser = subparsers.add_parser('run', help='Run quantum tests')
     test_parser.add_argument('--framework', choices=['qiskit', 'cirq', 'pennylane'], 
@@ -332,6 +338,52 @@ def run_deploy(args) -> int:
         return 1
 
 
+def run_init(args) -> int:
+    """Initialize quantum DevOps CI/CD."""
+    try:
+        print("🚀 Initializing Quantum DevOps CI/CD...")
+        
+        # Import here to avoid circular imports
+        from .database.migrations import run_migrations
+        from .database.connection import DatabaseConnection, DatabaseConfig
+        
+        # Set up database configuration
+        db_config = DatabaseConfig()
+        if args.database:
+            db_config.database_type = args.database
+        
+        print(f"📊 Setting up {db_config.database_type} database...")
+        
+        # Initialize database connection and run migrations
+        connection = DatabaseConnection(db_config)
+        success = run_migrations(connection)
+        
+        if success:
+            print("✅ Database setup completed successfully!")
+            
+            # Test the connection
+            try:
+                status = connection.execute_query("SELECT 1 as test_connection")
+                if status:
+                    print("🔗 Database connection test passed")
+            except Exception as e:
+                print(f"⚠️  Database connection test failed: {e}")
+            
+            print("\n🎯 Next steps:")
+            print("1. Configure your quantum.config.yml file")
+            print("2. Set up quantum provider credentials")
+            print("3. Run: quantum-test run --framework qiskit")
+            
+            return 0
+        else:
+            print("❌ Database setup failed")
+            return 1
+            
+    except Exception as e:
+        print(f"❌ Initialization failed: {e}")
+        return 1
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """Main entry point for quantum-test CLI."""
     parser = create_parser()
@@ -347,7 +399,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     
     # Dispatch to appropriate handler
     try:
-        if args.command == 'run':
+        if args.command == 'init':
+            return run_init(args)
+        elif args.command == 'run':
             return run_tests(args)
         elif args.command == 'lint':
             return run_lint(args)
