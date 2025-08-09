@@ -6,7 +6,12 @@ and diagnostic capabilities for the quantum testing infrastructure.
 """
 
 import time
-import psutil
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -170,6 +175,11 @@ class SystemResourcesHealthChecker(HealthChecker):
     
     def _execute_check(self) -> tuple[HealthStatus, str, Dict[str, Any]]:
         """Check system resource utilization."""
+        if not PSUTIL_AVAILABLE:
+            return HealthStatus.WARNING, "psutil not available - system resource monitoring disabled", {
+                'psutil_available': False
+            }
+        
         try:
             # Get system metrics
             cpu_percent = psutil.cpu_percent(interval=0.1)

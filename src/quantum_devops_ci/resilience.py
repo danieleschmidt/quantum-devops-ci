@@ -15,7 +15,7 @@ from enum import Enum
 
 from .exceptions import (
     TestExecutionError, BackendConnectionError, ResourceExhaustionError,
-    NoiseModelError, CircuitValidationError
+    NoiseModelError, CircuitValidationError, SecurityError, ValidationError
 )
 
 

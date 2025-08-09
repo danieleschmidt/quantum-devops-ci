@@ -22,7 +22,17 @@ class QuantumDevOpsError(Exception):
         return self.message
 
 
-class CircuitValidationError(QuantumDevOpsError):
+class ValidationError(QuantumDevOpsError):
+    """Raised when input validation fails."""
+    pass
+
+
+class SecurityError(QuantumDevOpsError):
+    """Raised when security validation fails."""
+    pass
+
+
+class CircuitValidationError(ValidationError):
     """Raised when quantum circuit validation fails."""
     pass
 

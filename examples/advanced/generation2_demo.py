@@ -356,7 +356,7 @@ def main():
     
     # Suppress warnings for cleaner output
     warnings.filterwarnings('ignore', category=UserWarning)
-    warnings.filterwarnings('ignore', category=ImportError)
+    warnings.filterwarnings('ignore')
     
     test_results = []
     
