@@ -1,3 +1,4 @@
+```python
 """
 Resilience and error recovery framework for quantum DevOps CI/CD.
 
@@ -15,7 +16,7 @@ from enum import Enum
 
 from .exceptions import (
     TestExecutionError, BackendConnectionError, ResourceExhaustionError,
-    NoiseModelError, CircuitValidationError
+    NoiseModelError, CircuitValidationError, SecurityError, ValidationError
 )
 
 
@@ -416,3 +417,4 @@ def timeout(seconds: float):
 def fallback(fallback_func: Callable, conditions: Optional[List[Type[Exception]]] = None):
     """Decorator to apply fallback pattern."""
     return FallbackHandler(fallback_func, conditions)
+```
