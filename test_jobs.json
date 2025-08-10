@@ -1,0 +1,14 @@
+[
+  {
+    "id": "vqe_experiment_1",
+    "circuit": "vqe_h2",
+    "shots": 10000,
+    "priority": "high"
+  },
+  {
+    "id": "qaoa_experiment_1",
+    "circuit": "qaoa_maxcut",
+    "shots": 5000,
+    "priority": "medium"
+  }
+]

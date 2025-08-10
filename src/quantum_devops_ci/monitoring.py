@@ -1,19 +1,28 @@
 """
-Quantum CI/CD monitoring and metrics collection.
+Advanced monitoring and observability framework for quantum DevOps CI/CD.
 
-This module provides tools for tracking quantum CI/CD pipeline metrics,
-performance monitoring, and dashboard integration.
+This module provides comprehensive monitoring, alerting, and observability
+capabilities specifically designed for quantum computing workflows.
 """
 
-import json
 import time
-import warnings
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta
-from pathlib import Path
+import logging
 import threading
-from queue import Queue
+import warnings
+from typing import Dict, List, Optional, Any, Callable, Union
+from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor
+
+from .database.models import (
+    BuildRecord, HardwareUsageRecord, TestResult, CostRecord,
+    JobRecord, DeploymentRecord, SecurityAuditRecord
+)
+from .database.connection import DatabaseConnection, DatabaseConfig
+from .exceptions import MonitoringError, BackendConnectionError
+from .security import requires_auth, audit_action
+from .validation import validate_inputs
 
 
 @dataclass

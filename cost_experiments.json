@@ -1,0 +1,14 @@
+[
+  {
+    "name": "bell_state_test",
+    "shots": 1000,
+    "backend": "ibmq_qasm_simulator",
+    "estimated_cost": 0.1
+  },
+  {
+    "name": "vqe_optimization",
+    "shots": 50000,
+    "backend": "ibmq_manhattan",
+    "estimated_cost": 25.0
+  }
+]
