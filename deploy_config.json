@@ -1,0 +1,16 @@
+{
+  "environments": {
+    "production": {
+      "backend": "qasm_simulator",
+      "allocation": 100.0,
+      "max_shots": 10000,
+      "validation_shots": 1000
+    },
+    "staging": {
+      "backend": "statevector_simulator",
+      "allocation": 50.0,
+      "max_shots": 5000,
+      "validation_shots": 500
+    }
+  }
+}

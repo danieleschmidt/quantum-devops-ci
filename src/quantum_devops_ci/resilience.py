@@ -1,4 +1,3 @@
-```python
 """
 Resilience and error recovery framework for quantum DevOps CI/CD.
 
@@ -417,4 +416,3 @@ def timeout(seconds: float):
 def fallback(fallback_func: Callable, conditions: Optional[List[Type[Exception]]] = None):
     """Decorator to apply fallback pattern."""
     return FallbackHandler(fallback_func, conditions)
-```

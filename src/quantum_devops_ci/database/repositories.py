@@ -1,45 +1,46 @@
 """
-Repository pattern implementations for quantum DevOps CI/CD data access.
+Repository layer for database operations in quantum DevOps CI/CD.
 
-This module provides repository classes that encapsulate database access
-logic and provide a clean interface for data operations.
+This module provides repository classes for managing database operations
+with proper typing, error handling, and transaction management.
 """
 
 import json
-from typing import Dict, Any, List, Optional, Type, TypeVar, Generic
-from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional, TypeVar, Generic, Type
 
-from .connection import DatabaseConnection, get_connection
+from .connection import DatabaseConnection
 from .models import (
     BaseModel, BuildRecord, HardwareUsageRecord, TestResult,
     CostRecord, JobRecord, serialize_dict, deserialize_dict
 )
 
+
 T = TypeVar('T', bound=BaseModel)
 
 
 class BaseRepository(ABC, Generic[T]):
-    """Base repository class with common CRUD operations."""
+    """Base repository class for database operations."""
     
-    def __init__(self, connection: Optional[DatabaseConnection] = None):
+    def __init__(self, connection: DatabaseConnection):
         """Initialize repository with database connection."""
-        self.connection = connection or get_connection()
-        self._model_class: Optional[Type[T]] = None
+        self.connection = connection
     
     @property
     @abstractmethod
     def model_class(self) -> Type[T]:
-        """Get the model class this repository manages."""
+        """Get the model class for this repository."""
         pass
     
     def create(self, entity: T) -> T:
-        """Create new entity in database."""
-        # Prepare data for insertion
+        """Create new entity."""
         data = entity.to_dict()
-        data.pop('id', None)  # Remove ID for auto-increment
+        entity_id = data.pop('id', None)  # Remove ID for insert
+        data['created_at'] = datetime.now().isoformat()
+        data['updated_at'] = datetime.now().isoformat()
         
-        # Handle JSON serialization for complex fields
+        # Handle JSON serialization
         data = self._serialize_complex_fields(data)
         
         # Build SQL
@@ -47,4 +48,337 @@ class BaseRepository(ABC, Generic[T]):
         placeholders = ', '.join(['?' for _ in columns])
         column_names = ', '.join(columns)
         
-        sql = f\"INSERT INTO {self.model_class.table_name()} ({column_names}) VALUES ({placeholders})\"\n        \n        # Execute and get new ID\n        with self.connection.get_session() as conn:\n            cursor = conn.cursor()\n            cursor.execute(sql, list(data.values()))\n            entity.id = cursor.lastrowid\n        \n        return entity\n    \n    def get_by_id(self, entity_id: int) -> Optional[T]:\n        \"\"\"Get entity by ID.\"\"\"\n        sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE id = ?\"\n        results = self.connection.execute_query(sql, (entity_id,))\n        \n        if not results:\n            return None\n        \n        return self._row_to_entity(results[0])\n    \n    def get_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[T]:\n        \"\"\"Get all entities with optional pagination.\"\"\"\n        sql = f\"SELECT * FROM {self.model_class.table_name()} ORDER BY created_at DESC\"\n        \n        if limit is not None:\n            sql += f\" LIMIT {limit}\"\n        if offset is not None:\n            sql += f\" OFFSET {offset}\"\n        \n        results = self.connection.execute_query(sql)\n        return [self._row_to_entity(row) for row in results]\n    \n    def update(self, entity: T) -> T:\n        \"\"\"Update existing entity.\"\"\"\n        data = entity.to_dict()\n        entity_id = data.pop('id')\n        data['updated_at'] = datetime.now().isoformat()\n        \n        # Handle JSON serialization\n        data = self._serialize_complex_fields(data)\n        \n        # Build SQL\n        set_clauses = [f\"{col} = ?\" for col in data.keys()]\n        sql = f\"UPDATE {self.model_class.table_name()} SET {', '.join(set_clauses)} WHERE id = ?\"\n        \n        params = list(data.values()) + [entity_id]\n        self.connection.execute_command(sql, tuple(params))\n        \n        return entity\n    \n    def delete(self, entity_id: int) -> bool:\n        \"\"\"Delete entity by ID.\"\"\"\n        sql = f\"DELETE FROM {self.model_class.table_name()} WHERE id = ?\"\n        rows_affected = self.connection.execute_command(sql, (entity_id,))\n        return rows_affected > 0\n    \n    def find(self, **filters) -> List[T]:\n        \"\"\"Find entities by filters.\"\"\"\n        if not filters:\n            return self.get_all()\n        \n        where_clauses = []\n        params = []\n        \n        for key, value in filters.items():\n            where_clauses.append(f\"{key} = ?\")\n            params.append(value)\n        \n        sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE {' AND '.join(where_clauses)} ORDER BY created_at DESC\"\n        results = self.connection.execute_query(sql, tuple(params))\n        \n        return [self._row_to_entity(row) for row in results]\n    \n    def count(self, **filters) -> int:\n        \"\"\"Count entities matching filters.\"\"\"\n        if not filters:\n            sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()}\"\n            params = ()\n        else:\n            where_clauses = []\n            params = []\n            \n            for key, value in filters.items():\n                where_clauses.append(f\"{key} = ?\")\n                params.append(value)\n            \n            sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE {' AND '.join(where_clauses)}\"\n        \n        results = self.connection.execute_query(sql, tuple(params))\n        return results[0]['count'] if results else 0\n    \n    def _serialize_complex_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Serialize complex fields to JSON strings.\"\"\"\n        # Fields that should be serialized as JSON\n        json_fields = ['metadata', 'measurement_counts', 'result_data']\n        \n        for field in json_fields:\n            if field in data and isinstance(data[field], (dict, list)):\n                data[field] = serialize_dict(data[field])\n        \n        return data\n    \n    def _row_to_entity(self, row: Dict[str, Any]) -> T:\n        \"\"\"Convert database row to entity object.\"\"\"\n        # Deserialize JSON fields\n        json_fields = ['metadata', 'measurement_counts', 'result_data']\n        \n        for field in json_fields:\n            if field in row and isinstance(row[field], str):\n                row[field] = deserialize_dict(row[field])\n        \n        # Convert datetime strings back to datetime objects\n        datetime_fields = ['created_at', 'updated_at', 'start_time', 'end_time', \n                          'scheduled_time', 'billing_period_start', 'billing_period_end']\n        \n        for field in datetime_fields:\n            if field in row and row[field] and isinstance(row[field], str):\n                try:\n                    row[field] = datetime.fromisoformat(row[field])\n                except ValueError:\n                    # Handle different datetime formats\n                    try:\n                        row[field] = datetime.strptime(row[field], '%Y-%m-%d %H:%M:%S')\n                    except ValueError:\n                        row[field] = None\n        \n        # Create entity instance\n        return self.model_class(**row)\n\n\nclass BuildRepository(BaseRepository[BuildRecord]):\n    \"\"\"Repository for build records.\"\"\"\n    \n    @property\n    def model_class(self) -> Type[BuildRecord]:\n        return BuildRecord\n    \n    def get_by_commit(self, commit_hash: str) -> List[BuildRecord]:\n        \"\"\"Get builds by commit hash.\"\"\"\n        return self.find(commit_hash=commit_hash)\n    \n    def get_by_branch(self, branch: str, limit: Optional[int] = None) -> List[BuildRecord]:\n        \"\"\"Get builds by branch.\"\"\"\n        sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE branch = ? ORDER BY created_at DESC\"\n        \n        if limit:\n            sql += f\" LIMIT {limit}\"\n        \n        results = self.connection.execute_query(sql, (branch,))\n        return [self._row_to_entity(row) for row in results]\n    \n    def get_recent_builds(self, days: int = 30) -> List[BuildRecord]:\n        \"\"\"Get builds from recent days.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE created_at >= ? ORDER BY created_at DESC\"\n        \n        results = self.connection.execute_query(sql, (cutoff_date.isoformat(),))\n        return [self._row_to_entity(row) for row in results]\n    \n    def get_success_rate(self, days: int = 30) -> float:\n        \"\"\"Calculate build success rate for recent period.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        \n        total_sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ?\"\n        success_sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ? AND status = 'success'\"\n        \n        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))\n        success_results = self.connection.execute_query(success_sql, (cutoff_date.isoformat(),))\n        \n        total_builds = total_results[0]['count'] if total_results else 0\n        successful_builds = success_results[0]['count'] if success_results else 0\n        \n        return successful_builds / total_builds if total_builds > 0 else 0.0\n\n\nclass HardwareUsageRepository(BaseRepository[HardwareUsageRecord]):\n    \"\"\"Repository for hardware usage records.\"\"\"\n    \n    @property\n    def model_class(self) -> Type[HardwareUsageRecord]:\n        return HardwareUsageRecord\n    \n    def get_by_provider(self, provider: str, days: Optional[int] = None) -> List[HardwareUsageRecord]:\n        \"\"\"Get usage records by provider.\"\"\"\n        if days:\n            cutoff_date = datetime.now() - timedelta(days=days)\n            sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE provider = ? AND created_at >= ? ORDER BY created_at DESC\"\n            results = self.connection.execute_query(sql, (provider, cutoff_date.isoformat()))\n        else:\n            results = self.connection.execute_query(\n                f\"SELECT * FROM {self.model_class.table_name()} WHERE provider = ? ORDER BY created_at DESC\",\n                (provider,)\n            )\n        \n        return [self._row_to_entity(row) for row in results]\n    \n    def get_cost_summary(self, days: int = 30) -> Dict[str, Any]:\n        \"\"\"Get cost summary for recent period.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        \n        # Total cost\n        total_sql = f\"SELECT SUM(cost_usd) as total_cost, COUNT(*) as total_jobs FROM {self.model_class.table_name()} WHERE created_at >= ?\"\n        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))\n        \n        # Cost by provider\n        provider_sql = f\"SELECT provider, SUM(cost_usd) as cost, COUNT(*) as jobs FROM {self.model_class.table_name()} WHERE created_at >= ? GROUP BY provider\"\n        provider_results = self.connection.execute_query(provider_sql, (cutoff_date.isoformat(),))\n        \n        # Cost by backend\n        backend_sql = f\"SELECT backend, SUM(cost_usd) as cost, COUNT(*) as jobs FROM {self.model_class.table_name()} WHERE created_at >= ? GROUP BY backend\"\n        backend_results = self.connection.execute_query(backend_sql, (cutoff_date.isoformat(),))\n        \n        total = total_results[0] if total_results else {'total_cost': 0, 'total_jobs': 0}\n        \n        return {\n            'total_cost': total['total_cost'] or 0,\n            'total_jobs': total['total_jobs'] or 0,\n            'daily_average': (total['total_cost'] or 0) / days,\n            'cost_by_provider': {row['provider']: row['cost'] for row in provider_results},\n            'cost_by_backend': {row['backend']: row['cost'] for row in backend_results}\n        }\n\n\nclass TestResultRepository(BaseRepository[TestResult]):\n    \"\"\"Repository for test results.\"\"\"\n    \n    @property\n    def model_class(self) -> Type[TestResult]:\n        return TestResult\n    \n    def get_by_build_id(self, build_id: int) -> List[TestResult]:\n        \"\"\"Get test results for a build.\"\"\"\n        return self.find(build_id=build_id)\n    \n    def get_test_trends(self, test_name: str, days: int = 30) -> List[TestResult]:\n        \"\"\"Get trends for a specific test.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE test_name = ? AND created_at >= ? ORDER BY created_at ASC\"\n        \n        results = self.connection.execute_query(sql, (test_name, cutoff_date.isoformat()))\n        return [self._row_to_entity(row) for row in results]\n    \n    def get_failure_rate(self, days: int = 30) -> float:\n        \"\"\"Calculate test failure rate.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        \n        total_sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ?\"\n        failed_sql = f\"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ? AND status = 'failed'\"\n        \n        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))\n        failed_results = self.connection.execute_query(failed_sql, (cutoff_date.isoformat(),))\n        \n        total_tests = total_results[0]['count'] if total_results else 0\n        failed_tests = failed_results[0]['count'] if failed_results else 0\n        \n        return failed_tests / total_tests if total_tests > 0 else 0.0\n\n\nclass CostRepository(BaseRepository[CostRecord]):\n    \"\"\"Repository for cost records.\"\"\"\n    \n    @property\n    def model_class(self) -> Type[CostRecord]:\n        return CostRecord\n    \n    def get_by_project(self, project: str, days: Optional[int] = None) -> List[CostRecord]:\n        \"\"\"Get cost records by project.\"\"\"\n        if days:\n            cutoff_date = datetime.now() - timedelta(days=days)\n            sql = f\"SELECT * FROM {self.model_class.table_name()} WHERE project = ? AND created_at >= ? ORDER BY created_at DESC\"\n            results = self.connection.execute_query(sql, (project, cutoff_date.isoformat()))\n        else:\n            results = self.connection.execute_query(\n                f\"SELECT * FROM {self.model_class.table_name()} WHERE project = ? ORDER BY created_at DESC\",\n                (project,)\n            )\n        \n        return [self._row_to_entity(row) for row in results]\n    \n    def get_monthly_costs(self, year: int, month: int) -> Dict[str, Any]:\n        \"\"\"Get costs for a specific month.\"\"\"\n        start_date = datetime(year, month, 1)\n        if month == 12:\n            end_date = datetime(year + 1, 1, 1)\n        else:\n            end_date = datetime(year, month + 1, 1)\n        \n        sql = f\"SELECT provider, service, SUM(total_cost) as cost FROM {self.model_class.table_name()} WHERE created_at >= ? AND created_at < ? GROUP BY provider, service\"\n        results = self.connection.execute_query(sql, (start_date.isoformat(), end_date.isoformat()))\n        \n        costs_by_provider = {}\n        total_cost = 0\n        \n        for row in results:\n            provider = row['provider']\n            service = row['service']\n            cost = row['cost']\n            \n            if provider not in costs_by_provider:\n                costs_by_provider[provider] = {}\n            \n            costs_by_provider[provider][service] = cost\n            total_cost += cost\n        \n        return {\n            'year': year,\n            'month': month,\n            'total_cost': total_cost,\n            'costs_by_provider': costs_by_provider\n        }\n\n\nclass JobRepository(BaseRepository[JobRecord]):\n    \"\"\"Repository for job records.\"\"\"\n    \n    @property\n    def model_class(self) -> Type[JobRecord]:\n        return JobRecord\n    \n    def get_by_job_id(self, job_id: str) -> Optional[JobRecord]:\n        \"\"\"Get job by job ID.\"\"\"\n        results = self.find(job_id=job_id)\n        return results[0] if results else None\n    \n    def get_by_status(self, status: str) -> List[JobRecord]:\n        \"\"\"Get jobs by status.\"\"\"\n        return self.find(status=status)\n    \n    def get_queue_status(self) -> Dict[str, Any]:\n        \"\"\"Get queue status summary.\"\"\"\n        status_sql = f\"SELECT status, COUNT(*) as count FROM {self.model_class.table_name()} GROUP BY status\"\n        status_results = self.connection.execute_query(status_sql)\n        \n        provider_sql = f\"SELECT provider, COUNT(*) as count FROM {self.model_class.table_name()} WHERE status IN ('pending', 'queued', 'running') GROUP BY provider\"\n        provider_results = self.connection.execute_query(provider_sql)\n        \n        return {\n            'status_counts': {row['status']: row['count'] for row in status_results},\n            'active_by_provider': {row['provider']: row['count'] for row in provider_results}\n        }\n    \n    def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:\n        \"\"\"Get job performance metrics.\"\"\"\n        cutoff_date = datetime.now() - timedelta(days=days)\n        \n        metrics_sql = f\"\"\"\n        SELECT \n            AVG(queue_time_minutes) as avg_queue_time,\n            AVG(execution_time_minutes) as avg_execution_time,\n            AVG(actual_cost) as avg_cost,\n            COUNT(*) as total_jobs,\n            SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_jobs\n        FROM {self.model_class.table_name()} \n        WHERE created_at >= ?\n        \"\"\"\n        \n        results = self.connection.execute_query(metrics_sql, (cutoff_date.isoformat(),))\n        metrics = results[0] if results else {}\n        \n        total_jobs = metrics.get('total_jobs', 0)\n        successful_jobs = metrics.get('successful_jobs', 0)\n        \n        return {\n            'avg_queue_time_minutes': metrics.get('avg_queue_time', 0) or 0,\n            'avg_execution_time_minutes': metrics.get('avg_execution_time', 0) or 0,\n            'avg_cost': metrics.get('avg_cost', 0) or 0,\n            'total_jobs': total_jobs,\n            'success_rate': successful_jobs / total_jobs if total_jobs > 0 else 0.0\n        }
+        sql = f"INSERT INTO {self.model_class.table_name()} ({column_names}) VALUES ({placeholders})"
+        
+        # Execute and get new ID
+        try:
+            cursor = self.connection.execute_command(sql, tuple(data.values()))
+            if hasattr(cursor, 'lastrowid'):
+                entity.id = cursor.lastrowid
+            return entity
+        except Exception as e:
+            raise Exception(f"Failed to create entity: {e}")
+    
+    def get_by_id(self, entity_id: int) -> Optional[T]:
+        """Get entity by ID."""
+        sql = f"SELECT * FROM {self.model_class.table_name()} WHERE id = ?"
+        results = self.connection.execute_query(sql, (entity_id,))
+        
+        if not results:
+            return None
+        
+        return self._row_to_entity(results[0])
+    
+    def get_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[T]:
+        """Get all entities with optional pagination."""
+        sql = f"SELECT * FROM {self.model_class.table_name()} ORDER BY created_at DESC"
+        
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+        if offset is not None:
+            sql += f" OFFSET {offset}"
+        
+        results = self.connection.execute_query(sql)
+        return [self._row_to_entity(row) for row in results]
+    
+    def update(self, entity: T) -> T:
+        """Update existing entity."""
+        data = entity.to_dict()
+        entity_id = data.pop('id')
+        data['updated_at'] = datetime.now().isoformat()
+        
+        # Handle JSON serialization
+        data = self._serialize_complex_fields(data)
+        
+        # Build SQL
+        set_clauses = [f"{col} = ?" for col in data.keys()]
+        sql = f"UPDATE {self.model_class.table_name()} SET {', '.join(set_clauses)} WHERE id = ?"
+        
+        params = list(data.values()) + [entity_id]
+        self.connection.execute_command(sql, tuple(params))
+        
+        return entity
+    
+    def delete(self, entity_id: int) -> bool:
+        """Delete entity by ID."""
+        sql = f"DELETE FROM {self.model_class.table_name()} WHERE id = ?"
+        rows_affected = self.connection.execute_command(sql, (entity_id,))
+        return rows_affected > 0
+    
+    def find(self, **filters) -> List[T]:
+        """Find entities by filters."""
+        if not filters:
+            return self.get_all()
+        
+        where_clauses = []
+        params = []
+        
+        for key, value in filters.items():
+            where_clauses.append(f"{key} = ?")
+            params.append(value)
+        
+        sql = f"SELECT * FROM {self.model_class.table_name()} WHERE {' AND '.join(where_clauses)} ORDER BY created_at DESC"
+        results = self.connection.execute_query(sql, tuple(params))
+        
+        return [self._row_to_entity(row) for row in results]
+    
+    def count(self, **filters) -> int:
+        """Count entities matching filters."""
+        if not filters:
+            sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()}"
+            params = ()
+        else:
+            where_clauses = []
+            params = []
+            
+            for key, value in filters.items():
+                where_clauses.append(f"{key} = ?")
+                params.append(value)
+            
+            sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE {' AND '.join(where_clauses)}"
+        
+        results = self.connection.execute_query(sql, tuple(params))
+        return results[0]['count'] if results else 0
+    
+    def _serialize_complex_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Serialize complex fields to JSON strings."""
+        # Fields that should be serialized as JSON
+        json_fields = ['metadata', 'measurement_counts', 'result_data']
+        
+        for field in json_fields:
+            if field in data and isinstance(data[field], (dict, list)):
+                data[field] = serialize_dict(data[field])
+        
+        return data
+    
+    def _row_to_entity(self, row: Dict[str, Any]) -> T:
+        """Convert database row to entity object."""
+        # Deserialize JSON fields
+        json_fields = ['metadata', 'measurement_counts', 'result_data']
+        
+        for field in json_fields:
+            if field in row and isinstance(row[field], str):
+                row[field] = deserialize_dict(row[field])
+        
+        # Convert datetime strings back to datetime objects
+        datetime_fields = ['created_at', 'updated_at', 'start_time', 'end_time', 
+                          'scheduled_time', 'billing_period_start', 'billing_period_end']
+        
+        for field in datetime_fields:
+            if field in row and row[field] and isinstance(row[field], str):
+                try:
+                    row[field] = datetime.fromisoformat(row[field])
+                except ValueError:
+                    # Handle different datetime formats
+                    try:
+                        row[field] = datetime.strptime(row[field], '%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        row[field] = None
+        
+        # Create entity instance
+        return self.model_class(**row)
+
+
+class BuildRepository(BaseRepository[BuildRecord]):
+    """Repository for build records."""
+    
+    @property
+    def model_class(self) -> Type[BuildRecord]:
+        return BuildRecord
+    
+    def get_by_commit(self, commit_hash: str) -> List[BuildRecord]:
+        """Get builds by commit hash."""
+        return self.find(commit_hash=commit_hash)
+    
+    def get_by_branch(self, branch: str, limit: Optional[int] = None) -> List[BuildRecord]:
+        """Get builds by branch."""
+        sql = f"SELECT * FROM {self.model_class.table_name()} WHERE branch = ? ORDER BY created_at DESC"
+        
+        if limit:
+            sql += f" LIMIT {limit}"
+        
+        results = self.connection.execute_query(sql, (branch,))
+        return [self._row_to_entity(row) for row in results]
+    
+    def get_recent_builds(self, days: int = 30) -> List[BuildRecord]:
+        """Get builds from recent days."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        sql = f"SELECT * FROM {self.model_class.table_name()} WHERE created_at >= ? ORDER BY created_at DESC"
+        
+        results = self.connection.execute_query(sql, (cutoff_date.isoformat(),))
+        return [self._row_to_entity(row) for row in results]
+    
+    def get_success_rate(self, days: int = 30) -> float:
+        """Calculate build success rate for recent period."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        total_sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ?"
+        success_sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ? AND status = 'success'"
+        
+        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))
+        success_results = self.connection.execute_query(success_sql, (cutoff_date.isoformat(),))
+        
+        total_builds = total_results[0]['count'] if total_results else 0
+        successful_builds = success_results[0]['count'] if success_results else 0
+        
+        return successful_builds / total_builds if total_builds > 0 else 0.0
+
+
+class HardwareUsageRepository(BaseRepository[HardwareUsageRecord]):
+    """Repository for hardware usage records."""
+    
+    @property
+    def model_class(self) -> Type[HardwareUsageRecord]:
+        return HardwareUsageRecord
+    
+    def get_by_provider(self, provider: str, days: Optional[int] = None) -> List[HardwareUsageRecord]:
+        """Get usage records by provider."""
+        if days:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            sql = f"SELECT * FROM {self.model_class.table_name()} WHERE provider = ? AND created_at >= ? ORDER BY created_at DESC"
+            results = self.connection.execute_query(sql, (provider, cutoff_date.isoformat()))
+        else:
+            results = self.connection.execute_query(
+                f"SELECT * FROM {self.model_class.table_name()} WHERE provider = ? ORDER BY created_at DESC",
+                (provider,)
+            )
+        
+        return [self._row_to_entity(row) for row in results]
+    
+    def get_cost_summary(self, days: int = 30) -> Dict[str, Any]:
+        """Get cost summary for recent period."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        # Total cost
+        total_sql = f"SELECT SUM(cost_usd) as total_cost, COUNT(*) as total_jobs FROM {self.model_class.table_name()} WHERE created_at >= ?"
+        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))
+        
+        # Cost by provider
+        provider_sql = f"SELECT provider, SUM(cost_usd) as cost, COUNT(*) as jobs FROM {self.model_class.table_name()} WHERE created_at >= ? GROUP BY provider"
+        provider_results = self.connection.execute_query(provider_sql, (cutoff_date.isoformat(),))
+        
+        # Cost by backend
+        backend_sql = f"SELECT backend, SUM(cost_usd) as cost, COUNT(*) as jobs FROM {self.model_class.table_name()} WHERE created_at >= ? GROUP BY backend"
+        backend_results = self.connection.execute_query(backend_sql, (cutoff_date.isoformat(),))
+        
+        total = total_results[0] if total_results else {'total_cost': 0, 'total_jobs': 0}
+        
+        return {
+            'total_cost': total['total_cost'] or 0,
+            'total_jobs': total['total_jobs'] or 0,
+            'daily_average': (total['total_cost'] or 0) / days,
+            'cost_by_provider': {row['provider']: row['cost'] for row in provider_results},
+            'cost_by_backend': {row['backend']: row['cost'] for row in backend_results}
+        }
+
+
+class TestResultRepository(BaseRepository[TestResult]):
+    """Repository for test results."""
+    
+    @property
+    def model_class(self) -> Type[TestResult]:
+        return TestResult
+    
+    def get_by_build_id(self, build_id: int) -> List[TestResult]:
+        """Get test results for a build."""
+        return self.find(build_id=build_id)
+    
+    def get_test_trends(self, test_name: str, days: int = 30) -> List[TestResult]:
+        """Get trends for a specific test."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        sql = f"SELECT * FROM {self.model_class.table_name()} WHERE test_name = ? AND created_at >= ? ORDER BY created_at ASC"
+        
+        results = self.connection.execute_query(sql, (test_name, cutoff_date.isoformat()))
+        return [self._row_to_entity(row) for row in results]
+    
+    def get_failure_rate(self, days: int = 30) -> float:
+        """Calculate test failure rate."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        total_sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ?"
+        failed_sql = f"SELECT COUNT(*) as count FROM {self.model_class.table_name()} WHERE created_at >= ? AND status = 'failed'"
+        
+        total_results = self.connection.execute_query(total_sql, (cutoff_date.isoformat(),))
+        failed_results = self.connection.execute_query(failed_sql, (cutoff_date.isoformat(),))
+        
+        total_tests = total_results[0]['count'] if total_results else 0
+        failed_tests = failed_results[0]['count'] if failed_results else 0
+        
+        return failed_tests / total_tests if total_tests > 0 else 0.0
+
+
+class CostRepository(BaseRepository[CostRecord]):
+    """Repository for cost records."""
+    
+    @property
+    def model_class(self) -> Type[CostRecord]:
+        return CostRecord
+    
+    def get_by_project(self, project: str, days: Optional[int] = None) -> List[CostRecord]:
+        """Get cost records by project."""
+        if days:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            sql = f"SELECT * FROM {self.model_class.table_name()} WHERE project = ? AND created_at >= ? ORDER BY created_at DESC"
+            results = self.connection.execute_query(sql, (project, cutoff_date.isoformat()))
+        else:
+            results = self.connection.execute_query(
+                f"SELECT * FROM {self.model_class.table_name()} WHERE project = ? ORDER BY created_at DESC",
+                (project,)
+            )
+        
+        return [self._row_to_entity(row) for row in results]
+
+
+class JobRepository(BaseRepository[JobRecord]):
+    """Repository for job records."""
+    
+    @property
+    def model_class(self) -> Type[JobRecord]:
+        return JobRecord
+    
+    def get_by_job_id(self, job_id: str) -> Optional[JobRecord]:
+        """Get job by job ID."""
+        results = self.find(job_id=job_id)
+        return results[0] if results else None
+    
+    def get_by_status(self, status: str) -> List[JobRecord]:
+        """Get jobs by status."""
+        return self.find(status=status)
+    
+    def get_queue_status(self) -> Dict[str, Any]:
+        """Get queue status summary."""
+        status_sql = f"SELECT status, COUNT(*) as count FROM {self.model_class.table_name()} GROUP BY status"
+        status_results = self.connection.execute_query(status_sql)
+        
+        return {
+            'status_counts': {row['status']: row['count'] for row in status_results}
+        }
+    
+    def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:
+        """Get job performance metrics."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        metrics_sql = f"""
+        SELECT 
+            AVG(queue_time_minutes) as avg_queue_time,
+            AVG(execution_time_minutes) as avg_execution_time,
+            AVG(actual_cost) as avg_cost,
+            COUNT(*) as total_jobs,
+            SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_jobs
+        FROM {self.model_class.table_name()} 
+        WHERE created_at >= ?
+        """
+        
+        results = self.connection.execute_query(metrics_sql, (cutoff_date.isoformat(),))
+        metrics = results[0] if results else {}
+        
+        total_jobs = metrics.get('total_jobs', 0)
+        successful_jobs = metrics.get('successful_jobs', 0)
+        
+        return {
+            'avg_queue_time_minutes': metrics.get('avg_queue_time', 0) or 0,
+            'avg_execution_time_minutes': metrics.get('avg_execution_time', 0) or 0,
+            'avg_cost': metrics.get('avg_cost', 0) or 0,
+            'total_jobs': total_jobs,
+            'success_rate': successful_jobs / total_jobs if total_jobs > 0 else 0.0
+        }

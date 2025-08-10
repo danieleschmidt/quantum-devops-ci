@@ -342,6 +342,159 @@ def deserialize_dict(data: str) -> Dict[str, Any]:
         return {}
 
 
+@dataclass
+class DeploymentRecord(BaseModel):
+    """Deployment record model."""
+    deployment_id: str = ""
+    algorithm_id: str = ""
+    strategy: str = "blue_green"
+    environment: str = "production"
+    status: str = "pending"
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+    validation_fidelity: Optional[float] = None
+    validation_error_rate: Optional[float] = None
+    validation_cost: float = 0.0
+    rollback_reason: Optional[str] = None
+    rollback_time: Optional[datetime] = None
+    build_id: Optional[int] = None
+    circuit_hash: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def table_name(cls) -> str:
+        return "deployment_records"
+    
+    @classmethod
+    def create_table_sql(cls) -> str:
+        return """
+        CREATE TABLE IF NOT EXISTS deployment_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            deployment_id TEXT NOT NULL UNIQUE,
+            algorithm_id TEXT NOT NULL,
+            strategy TEXT DEFAULT 'blue_green',
+            environment TEXT DEFAULT 'production',
+            status TEXT NOT NULL DEFAULT 'pending',
+            start_time TIMESTAMP,
+            end_time TIMESTAMP,
+            duration_seconds REAL,
+            validation_fidelity REAL,
+            validation_error_rate REAL,
+            validation_cost REAL DEFAULT 0.0,
+            rollback_reason TEXT,
+            rollback_time TIMESTAMP,
+            build_id INTEGER,
+            circuit_hash TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+
+
+@dataclass
+class ABTestRecord(BaseModel):
+    """A/B test record model."""
+    test_id: str = ""
+    test_name: str = ""
+    variant_a: str = ""
+    variant_b: str = ""
+    status: str = "pending"
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration_hours: float = 0.0
+    sample_size_a: int = 0
+    sample_size_b: int = 0
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    winner: Optional[str] = None
+    improvement_percentage: float = 0.0
+    p_value: float = 1.0
+    confidence_level: float = 0.95
+    statistical_significance: bool = False
+    recommendation: str = ""
+    build_id: Optional[int] = None
+    deployment_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def table_name(cls) -> str:
+        return "ab_test_records"
+    
+    @classmethod
+    def create_table_sql(cls) -> str:
+        return """
+        CREATE TABLE IF NOT EXISTS ab_test_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_id TEXT NOT NULL UNIQUE,
+            test_name TEXT NOT NULL,
+            variant_a TEXT NOT NULL,
+            variant_b TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            start_time TIMESTAMP,
+            end_time TIMESTAMP,
+            duration_hours REAL DEFAULT 0.0,
+            sample_size_a INTEGER DEFAULT 0,
+            sample_size_b INTEGER DEFAULT 0,
+            metrics TEXT DEFAULT '{}',
+            winner TEXT,
+            improvement_percentage REAL DEFAULT 0.0,
+            p_value REAL DEFAULT 1.0,
+            confidence_level REAL DEFAULT 0.95,
+            statistical_significance BOOLEAN DEFAULT FALSE,
+            recommendation TEXT DEFAULT '',
+            build_id INTEGER,
+            deployment_id TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+
+
+@dataclass
+class SecurityAuditRecord(BaseModel):
+    """Security audit record model."""
+    action: str = ""
+    resource: str = ""
+    user_id: Optional[str] = None
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+    success: bool = True
+    failure_reason: Optional[str] = None
+    sensitive_data_accessed: bool = False
+    permission_level: str = "read"
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def table_name(cls) -> str:
+        return "security_audit_records"
+    
+    @classmethod
+    def create_table_sql(cls) -> str:
+        return """
+        CREATE TABLE IF NOT EXISTS security_audit_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            resource TEXT NOT NULL,
+            user_id TEXT,
+            user_agent TEXT,
+            ip_address TEXT,
+            success BOOLEAN DEFAULT TRUE,
+            failure_reason TEXT,
+            sensitive_data_accessed BOOLEAN DEFAULT FALSE,
+            permission_level TEXT DEFAULT 'read',
+            session_id TEXT,
+            request_id TEXT,
+            metadata TEXT DEFAULT '{}',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+
+
 def create_all_tables() -> List[str]:
     """Get SQL statements to create all tables."""
     model_classes = [
@@ -349,7 +502,10 @@ def create_all_tables() -> List[str]:
         HardwareUsageRecord,
         TestResult,
         CostRecord,
-        JobRecord
+        JobRecord,
+        DeploymentRecord,
+        ABTestRecord,
+        SecurityAuditRecord
     ]
     
     return [model_class.create_table_sql() for model_class in model_classes]
