@@ -43,7 +43,7 @@ module.exports = {
   ],
   
   // Module resolution
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   },
@@ -76,26 +76,7 @@ module.exports = {
   
   // Reporter configuration
   reporters: [
-    'default',
-    [
-      'jest-html-reporters',
-      {
-        publicPath: './coverage/html-report',
-        filename: 'report.html',
-        expand: true
-      }
-    ],
-    [
-      'jest-junit',
-      {
-        outputDirectory: './coverage',
-        outputName: 'junit.xml',
-        classNameTemplate: '{classname}',
-        titleTemplate: '{title}',
-        ancestorSeparator: ' › ',
-        usePathForSuiteName: 'true'
-      }
-    ]
+    'default'
   ],
   
   // Global configuration

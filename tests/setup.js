@@ -3,11 +3,8 @@
  * This file is automatically loaded before each test suite
  */
 
-// Import required testing utilities
-import { jest } from '@jest/globals';
-
 // Set up global test environment
-global.jest = jest;
+// Note: jest is globally available in Jest test environment
 
 // Configure test timeouts
 jest.setTimeout(30000); // 30 seconds default timeout
@@ -40,16 +37,16 @@ afterEach(() => {
 global.testUtils = {
   // Create a temporary directory for test files
   createTempDir: async () => {
-    const fs = await import('fs-extra');
-    const path = await import('path');
-    const os = await import('os');
+    const fs = require('fs-extra');
+    const path = require('path');
+    const os = require('os');
     
     return fs.mkdtemp(path.join(os.tmpdir(), 'quantum-devops-test-'));
   },
 
   // Clean up temporary directory
   cleanupTempDir: async (dir) => {
-    const fs = await import('fs-extra');
+    const fs = require('fs-extra');
     if (await fs.pathExists(dir)) {
       await fs.remove(dir);
     }

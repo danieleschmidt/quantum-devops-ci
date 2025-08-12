@@ -106,7 +106,7 @@ class CostOptimizer:
     """Quantum computing cost optimization engine."""
     
     def __init__(self, 
-                 monthly_budget: float,
+                 monthly_budget: float = 1000.0,
                  priority_weights: Optional[Dict[str, float]] = None):
         """
         Initialize cost optimizer.
