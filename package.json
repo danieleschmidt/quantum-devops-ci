@@ -96,9 +96,6 @@
     "jest-environment-node": "^29.5.0",
     "@jest/globals": "^29.5.0"
   },
-  "peerDependencies": {
-    "python": ">=3.8"
-  },
   "files": [
     "src/",
     "templates/",
