@@ -105,3 +105,65 @@ class AuthenticationError(QuantumDevOpsError):
 class AuthorizationError(QuantumDevOpsError):
     """Raised when authorization fails."""
     pass
+
+
+# Generation 4 Intelligence Exceptions
+
+class OptimizationError(QuantumDevOpsError):
+    """Raised when quantum circuit optimization fails."""
+    pass
+
+
+class ModelTrainingError(QuantumDevOpsError):
+    """Raised when ML model training fails."""
+    pass
+
+
+class PredictionError(QuantumDevOpsError):
+    """Raised when ML prediction fails."""
+    pass
+
+
+class InsufficientDataError(QuantumDevOpsError):
+    """Raised when insufficient data is available for analysis."""
+    pass
+
+
+class QECError(QuantumDevOpsError):
+    """Raised when quantum error correction fails."""
+    pass
+
+
+class SyndromeDecodeError(QECError):
+    """Raised when error syndrome decoding fails."""
+    pass
+
+
+class LogicalOperationError(QECError):
+    """Raised when logical qubit operation fails."""
+    pass
+
+
+class StatisticalTestError(QuantumDevOpsError):
+    """Raised when statistical test execution fails."""
+    pass
+
+
+class ModelValidationError(QuantumDevOpsError):
+    """Raised when model validation fails."""
+    pass
+
+
+class SovereigntyViolationError(QuantumDevOpsError):
+    """Raised when quantum sovereignty rules are violated."""
+    pass
+
+
+class ExportControlError(QuantumDevOpsError):
+    """Raised when export control regulations are violated."""
+    pass
+
+
+class ComplianceError(QuantumDevOpsError):
+    """Raised when compliance requirements are not met."""
+    pass
