@@ -5,14 +5,15 @@ This module provides comprehensive monitoring, alerting, and observability
 capabilities specifically designed for quantum computing workflows.
 """
 
+import json
 import time
-import queue
+from queue import Queue
 import logging
 import threading
 import warnings
 from typing import Dict, List, Optional, Any, Callable, Union
 from datetime import datetime, timedelta
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
