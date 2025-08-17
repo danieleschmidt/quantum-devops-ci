@@ -36,7 +36,7 @@ afterEach(() => {
 // Global test utilities
 global.testUtils = {
   // Create a temporary directory for test files
-  createTempDir: async () => {
+  createTempDir: async() => {
     const fs = require('fs-extra')
     const path = require('path')
     const os = require('os')
@@ -45,7 +45,7 @@ global.testUtils = {
   },
 
   // Clean up temporary directory
-  cleanupTempDir: async (dir) => {
+  cleanupTempDir: async(dir) => {
     const fs = require('fs-extra')
     if (await fs.pathExists(dir)) {
       await fs.remove(dir)
@@ -84,7 +84,7 @@ global.testUtils = {
   },
 
   // Wait for a condition to be true
-  waitFor: async (condition, timeout = 5000, interval = 100) => {
+  waitFor: async(condition, timeout = 5000, interval = 100) => {
     const start = Date.now()
     while (Date.now() - start < timeout) {
       if (await condition()) {
@@ -99,7 +99,7 @@ global.testUtils = {
 // Global test matchers
 expect.extend({
   // Custom matcher for quantum results
-  toHaveValidQuantumResult (received) {
+  toHaveValidQuantumResult(received) {
     const pass = (
       received &&
       typeof received === 'object' &&
@@ -122,7 +122,7 @@ expect.extend({
   },
 
   // Custom matcher for command line output
-  toHaveValidCliOutput (received) {
+  toHaveValidCliOutput(received) {
     const pass = (
       received &&
       typeof received === 'object' &&
@@ -152,7 +152,7 @@ process.on('unhandledRejection', (reason, _promise) => {
 })
 
 // Clean up after all tests
-afterAll(async () => {
+afterAll(async() => {
   // Clean up any global resources
   jest.clearAllMocks()
   jest.restoreAllMocks()

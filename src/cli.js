@@ -27,7 +27,7 @@ program
   .option('--skip-devcontainer', 'Skip creating dev container configuration')
   .option('--skip-workflows', 'Skip creating GitHub Actions workflows')
   .option('--dry-run', 'Show what would be created without actually creating files')
-  .action(async (options) => {
+  .action(async(options) => {
     const spinner = ora('Initializing quantum DevOps CI/CD...').start()
 
     try {
@@ -65,7 +65,7 @@ program
 program
   .command('status')
   .description('Show quantum DevOps CI/CD status')
-  .action(async () => {
+  .action(async() => {
     const spinner = ora('Checking quantum DevOps status...').start()
 
     try {
@@ -92,7 +92,7 @@ program
 program
   .command('validate')
   .description('Validate quantum configuration and test files')
-  .action(async () => {
+  .action(async() => {
     const spinner = ora('Validating quantum configuration...').start()
 
     try {
@@ -123,7 +123,7 @@ program
   })
 
 // Helper functions
-async function analyzeProject (projectRoot) {
+async function analyzeProject(projectRoot) {
   // Check if it's a git repository
   const gitDir = path.join(projectRoot, '.git')
   if (!await fs.pathExists(gitDir)) {
@@ -161,7 +161,7 @@ async function analyzeProject (projectRoot) {
   }
 }
 
-async function createProjectStructure (projectRoot, options) {
+async function createProjectStructure(projectRoot, options) {
   // Create directories
   const directories = [
     'quantum-tests',
@@ -190,7 +190,7 @@ async function createProjectStructure (projectRoot, options) {
   await createTestStructure(projectRoot, options)
 }
 
-async function createQuantumConfig (projectRoot, options) {
+async function createQuantumConfig(projectRoot, options) {
   const config = {
     quantum_devops_ci: {
       version: '1.0.0',
@@ -237,7 +237,7 @@ async function createQuantumConfig (projectRoot, options) {
   await fs.writeFile(configPath, yaml.stringify(config, { indent: 2 }))
 }
 
-async function createWorkflowTemplate (projectRoot, _options) {
+async function createWorkflowTemplate(projectRoot, _options) {
   // Note: As per constraints, we document the structure instead of creating actual .yml files
   const workflowDir = path.join(projectRoot, '.github/workflows')
   const readmePath = path.join(workflowDir, 'README.md')
@@ -282,7 +282,7 @@ https://quantum-devops-ci.readthedocs.io/workflows/
   await fs.writeFile(readmePath, workflowDoc)
 }
 
-async function createDevContainer (projectRoot, _options) {
+async function createDevContainer(projectRoot, _options) {
   const devcontainerDir = path.join(projectRoot, '.devcontainer')
 
   const devcontainerConfig = {
@@ -322,7 +322,7 @@ async function createDevContainer (projectRoot, _options) {
   await fs.writeFile(configPath, JSON.stringify(devcontainerConfig, null, 2))
 }
 
-async function createTestStructure (projectRoot, _options) {
+async function createTestStructure(projectRoot, _options) {
   const testsDir = path.join(projectRoot, 'quantum-tests')
 
   // Create test configuration
@@ -424,7 +424,7 @@ class TestExampleQuantumAlgorithm(NoiseAwareTest):
   await fs.writeFile(path.join(testsDir, '__init__.py'), '# Quantum tests package\n')
 }
 
-async function checkProjectStatus (projectRoot) {
+async function checkProjectStatus(projectRoot) {
   const status = {
     hasConfig: false,
     hasWorkflows: false,
@@ -452,7 +452,7 @@ async function checkProjectStatus (projectRoot) {
   return status
 }
 
-async function validateConfiguration (projectRoot) {
+async function validateConfiguration(projectRoot) {
   const validation = {
     isValid: true,
     errors: [],
@@ -498,7 +498,7 @@ async function validateConfiguration (projectRoot) {
   return validation
 }
 
-async function showDryRunResults (projectRoot, options) {
+async function showDryRunResults(projectRoot, options) {
   console.log(chalk.blue('\n📋 Files that would be created:'))
   console.log('  quantum.config.yml')
   console.log('  quantum-tests/')

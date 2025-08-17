@@ -45,7 +45,8 @@ module.exports = {
   // Module resolution
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1'
+    '^@tests/(.*)$': '<rootDir>/tests/$1',
+    '^inquirer$': '<rootDir>/tests/__mocks__/inquirer.js'
   },
   
   // Setup files

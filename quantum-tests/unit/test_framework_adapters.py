@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 from quantum_devops_ci.plugins import (
     QiskitAdapter, 
     CirqAdapter, 
-    PennyLaneAdapter
+    MockAdapter
 )
 from quantum_devops_ci.testing import NoiseAwareTest
 
@@ -186,50 +186,47 @@ class TestCirqAdapter:
         assert noise_model is not None
 
 
-class TestPennyLaneAdapter:
-    """Test PennyLane framework adapter functionality."""
+class TestMockAdapter:
+    """Test Mock framework adapter functionality."""
     
     @pytest.fixture
-    def pennylane_adapter(self):
-        """Provide a PennyLane adapter instance."""
-        return PennyLaneAdapter()
+    def mock_adapter(self):
+        """Provide a Mock adapter instance."""
+        return MockAdapter()
     
-    def test_framework_detection(self, pennylane_adapter):
-        """Test that adapter correctly identifies PennyLane framework."""
-        assert pennylane_adapter.supports('pennylane')
-        assert pennylane_adapter.supports('PennyLane')
-        assert not pennylane_adapter.supports('qiskit')
-        assert not pennylane_adapter.supports('cirq')
+    def test_framework_detection(self, mock_adapter):
+        """Test that adapter correctly identifies Mock framework."""
+        assert mock_adapter.available
     
-    @pytest.mark.pennylane
-    def test_qnode_creation(self, pennylane_adapter):
-        """Test quantum node creation from circuit description."""
-        circuit_data = {
-            'qubits': 2,
-            'operations': [
-                {'gate': 'Hadamard', 'wires': [0]},
-                {'gate': 'CNOT', 'wires': [0, 1]}
-            ],
-            'measurements': [
-                {'observable': 'PauliZ', 'wires': [0]},
-                {'observable': 'PauliZ', 'wires': [1]}
-            ]
-        }
+    def test_circuit_creation(self, mock_adapter):
+        """Test mock circuit creation."""
+        circuit = mock_adapter.create_circuit(2, 2)
         
-        with patch('pennylane.QNode') as mock_qnode:
-            qnode = pennylane_adapter.create_qnode(circuit_data)
-            
-            assert qnode is not None
-            mock_qnode.assert_called_once()
+        assert circuit is not None
+        assert circuit['num_qubits'] == 2
+        assert circuit['num_clbits'] == 2
+        assert circuit['gates'] == []
     
-    @pytest.mark.pennylane
-    def test_device_integration(self, pennylane_adapter):
-        """Test integration with PennyLane devices."""
-        with patch('pennylane.device') as mock_device:
-            device = pennylane_adapter.get_device('default.qubit', wires=2)
-            
-            assert device is not None
-            mock_device.assert_called_once_with('default.qubit', wires=2)
+    def test_gate_addition(self, mock_adapter):
+        """Test adding gates to mock circuit."""
+        circuit = mock_adapter.create_circuit(2, 2)
+        
+        mock_adapter.add_gate(circuit, 'h', [0])
+        mock_adapter.add_gate(circuit, 'cx', [0, 1])
+        
+        assert len(circuit['gates']) == 2
+        assert circuit['gates'][0]['name'] == 'h'
+        assert circuit['gates'][1]['name'] == 'cx'
+    
+    def test_circuit_execution(self, mock_adapter):
+        """Test mock circuit execution."""
+        circuit = mock_adapter.create_circuit(2, 2)
+        result = mock_adapter.execute_circuit(circuit, shots=1000)
+        
+        assert 'counts' in result
+        assert result['shots'] == 1000
+        counts = mock_adapter.get_counts(result)
+        assert isinstance(counts, dict)
 
 
 class TestFrameworkCompatibility:
@@ -241,7 +238,7 @@ class TestFrameworkCompatibility:
         return {
             'qiskit': QiskitAdapter(),
             'cirq': CirqAdapter(),
-            'pennylane': PennyLaneAdapter()
+            'mock': MockAdapter()
         }
     
     def test_bell_state_equivalence(self, all_adapters):

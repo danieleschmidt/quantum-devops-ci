@@ -83,7 +83,7 @@ def pytest_addoption(parser):
     )
     
     parser.addoption(
-        "--quantum-shots",
+        "--quantum-test-shots",
         type=int,
         default=1000,
         help="Default number of shots for quantum tests"
@@ -93,7 +93,7 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     """Configure pytest with quantum-specific settings."""
     # Store quantum test configuration
-    config.quantum_shots = config.getoption("--quantum-shots")
+    config.quantum_shots = config.getoption("--quantum-test-shots")
     config.run_slow = config.getoption("--run-slow")
     config.run_hardware = config.getoption("--run-hardware")
     

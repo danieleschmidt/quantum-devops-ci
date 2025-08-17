@@ -15,7 +15,7 @@ describe('End-to-End Workflow Integration', () => {
   let testWorkspace
   let originalCwd
 
-  beforeAll(async () => {
+  beforeAll(async() => {
     // Save original working directory
     originalCwd = process.cwd()
 
@@ -24,7 +24,7 @@ describe('End-to-End Workflow Integration', () => {
     process.chdir(testWorkspace)
   })
 
-  afterAll(async () => {
+  afterAll(async() => {
     // Restore original working directory
     process.chdir(originalCwd)
 
@@ -34,7 +34,7 @@ describe('End-to-End Workflow Integration', () => {
     }
   })
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     // Ensure clean workspace for each test
     const files = await fs.readdir(testWorkspace)
     for (const file of files) {
@@ -43,7 +43,7 @@ describe('End-to-End Workflow Integration', () => {
   })
 
   describe('Project Initialization Workflow', () => {
-    it('should initialize a complete quantum project', async () => {
+    it('should initialize a complete quantum project', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run initialization command
@@ -70,7 +70,7 @@ describe('End-to-End Workflow Integration', () => {
       expect(config.provider).toBe('ibmq')
     })
 
-    it('should handle initialization with custom configuration', async () => {
+    it('should handle initialization with custom configuration', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Create custom config
@@ -103,12 +103,12 @@ describe('End-to-End Workflow Integration', () => {
   })
 
   describe('Testing Workflow', () => {
-    beforeEach(async () => {
+    beforeEach(async() => {
       // Set up a basic quantum project
       await setupBasicProject()
     })
 
-    it('should run quantum tests successfully', async () => {
+    it('should run quantum tests successfully', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run quantum tests
@@ -124,7 +124,7 @@ describe('End-to-End Workflow Integration', () => {
       expect(testResult.stdout).toContain('quantum-tests/examples/test_basic.py')
     })
 
-    it('should generate test reports', async () => {
+    it('should generate test reports', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run tests with reporting
@@ -146,7 +146,7 @@ describe('End-to-End Workflow Integration', () => {
       expect(xmlContent).toContain('testcase')
     })
 
-    it('should handle test failures gracefully', async () => {
+    it('should handle test failures gracefully', async() => {
       // Create a failing test
       const failingTest = `
 import pytest
@@ -175,11 +175,11 @@ class TestFailingQuantum(NoiseAwareTest):
   })
 
   describe('Linting Workflow', () => {
-    beforeEach(async () => {
+    beforeEach(async() => {
       await setupBasicProject()
     })
 
-    it('should lint quantum circuits successfully', async () => {
+    it('should lint quantum circuits successfully', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run linting
@@ -195,7 +195,7 @@ class TestFailingQuantum(NoiseAwareTest):
       expect(lintResult.stdout).toContain('No issues found')
     })
 
-    it('should detect circuit issues', async () => {
+    it('should detect circuit issues', async() => {
       // Create a circuit with issues
       const problematicCircuit = `
 from qiskit import QuantumCircuit
@@ -225,11 +225,11 @@ for i in range(200):  # Excessive depth
   })
 
   describe('Deployment Workflow', () => {
-    beforeEach(async () => {
+    beforeEach(async() => {
       await setupBasicProject()
     })
 
-    it('should prepare deployment package', async () => {
+    it('should prepare deployment package', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run deployment preparation
@@ -245,7 +245,7 @@ for i in range(200):  # Excessive depth
       expect(await fs.pathExists('deployment-package.zip')).toBe(true)
     })
 
-    it('should validate deployment configuration', async () => {
+    it('should validate deployment configuration', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Run deployment validation
@@ -261,7 +261,7 @@ for i in range(200):  # Excessive depth
   })
 
   describe('Configuration Workflow', () => {
-    it('should manage provider configurations', async () => {
+    it('should manage provider configurations', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Add provider configuration
@@ -287,7 +287,7 @@ for i in range(200):  # Excessive depth
       expect(listResult.stdout).toContain('ibmq')
     })
 
-    it('should validate configurations', async () => {
+    it('should validate configurations', async() => {
       const cliPath = path.join(__dirname, '../../src/cli.js')
 
       // Create invalid configuration
@@ -310,7 +310,7 @@ for i in range(200):  # Excessive depth
   })
 
   // Helper functions
-  async function setupBasicProject () {
+  async function setupBasicProject() {
     // Create basic project structure
     await fs.ensureDir('quantum-tests/examples')
     await fs.ensureDir('src/quantum_devops_ci')
@@ -347,7 +347,7 @@ class TestBasicQuantum(NoiseAwareTest):
     await fs.writeFile('quantum-tests/examples/test_basic.py', basicTest)
   }
 
-  async function runCliCommand (args, options = {}) {
+  async function runCliCommand(args, options = {}) {
     return new Promise((resolve, reject) => {
       const child = spawn(args[0], args.slice(1), {
         cwd: testWorkspace,
