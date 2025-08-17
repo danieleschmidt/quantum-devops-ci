@@ -1,0 +1,153 @@
+name: Quantum Deployment Pipeline
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  deploy-npm:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm run test:ci
+      
+      - name: Build package
+        run: npm run build
+      
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  deploy-pypi:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      
+      - name: Build package
+        run: python -m build
+      
+      - name: Check package
+        run: twine check dist/*
+      
+      - name: Publish to PyPI
+        run: twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  quantum-hardware-validation:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production' || github.event_name == 'release'
+    environment: quantum-hardware
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -e .[all]
+      
+      - name: Configure quantum providers
+        run: |
+          echo "IBMQ_TOKEN=${{ secrets.IBMQ_TOKEN }}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+      
+      - name: Run hardware compatibility tests
+        run: |
+          python -m pytest quantum-tests/ -v -m hardware \
+            --hardware-timeout=3600 \
+            --max-hardware-jobs=3
+        timeout-minutes: 120
+      
+      - name: Generate hardware report
+        if: always()
+        run: |
+          python scripts/automation/metrics-collection.py \
+            --mode hardware-validation \
+            --output hardware-report.json
+      
+      - name: Upload hardware results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: hardware-validation-results
+          path: |
+            hardware-report.json
+            test-results/
+
+  update-documentation:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev]
+          pip install sphinx-rtd-theme
+      
+      - name: Build documentation
+        run: |
+          cd docs
+          make clean
+          make html
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html

@@ -167,3 +167,33 @@ class ExportControlError(QuantumDevOpsError):
 class ComplianceError(QuantumDevOpsError):
     """Raised when compliance requirements are not met."""
     pass
+
+
+# Research Framework Exceptions
+
+class QuantumResearchError(QuantumDevOpsError):
+    """Raised when quantum research operations fail."""
+    pass
+
+
+class ExperimentError(QuantumResearchError):
+    """Raised when quantum experiment execution fails."""
+    pass
+
+
+class StatisticalAnalysisError(QuantumResearchError):
+    """Raised when statistical analysis fails."""
+    pass
+
+
+class HypothesisValidationError(QuantumResearchError):
+    """Raised when hypothesis validation fails."""
+    pass
+
+
+# Alias for backward compatibility
+QuantumValidationError = ValidationError
+QuantumSecurityError = SecurityError
+QuantumTimeoutError = QuantumDevOpsError
+QuantumResourceError = ResourceExhaustionError
+QuantumTestError = TestExecutionError

@@ -1,0 +1,30 @@
+{
+  "study_id": "quantum_algorithm_comparison_2025",
+  "title": "Comparative Study of Quantum Optimization Algorithms",
+  "algorithms_tested": [
+    "Algorithm A",
+    "Algorithm B",
+    "Novel Algorithm"
+  ],
+  "metrics": [
+    "performance",
+    "efficiency"
+  ],
+  "results": {
+    "Algorithm A": {
+      "performance": 0.85,
+      "efficiency": 0.92
+    },
+    "Algorithm B": {
+      "performance": 0.78,
+      "efficiency": 0.88
+    },
+    "Novel Algorithm": {
+      "performance": 0.91,
+      "efficiency": 0.95
+    }
+  },
+  "best_algorithm": "Novel Algorithm",
+  "statistical_significance": "p < 0.05",
+  "conclusion": "Novel algorithm shows 7% improvement over baseline"
+}

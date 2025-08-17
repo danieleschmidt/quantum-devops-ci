@@ -13,7 +13,7 @@ jest.mock('child_process')
 describe('CLI Core Functionality', () => {
   let mockTempDir
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     // Create a mock temporary directory
     mockTempDir = '/tmp/quantum-test'
 
@@ -31,7 +31,7 @@ describe('CLI Core Functionality', () => {
     fs.readdir.mockResolvedValue(['test.py'])
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     // Clean up temp directory
     if (mockTempDir) {
       // Mock cleanup
@@ -39,7 +39,7 @@ describe('CLI Core Functionality', () => {
   })
 
   describe('Project Initialization', () => {
-    it('should create quantum config file', async () => {
+    it('should create quantum config file', async() => {
       // const _cli = require('../../src/cli.js')
 
       // Mock the createQuantumConfig function directly since it's internal
@@ -54,7 +54,7 @@ describe('CLI Core Functionality', () => {
       expect(fs.writeFile).toBeDefined()
     })
 
-    it('should handle initialization errors gracefully', async () => {
+    it('should handle initialization errors gracefully', async() => {
       // Mock fs error
       fs.writeFile.mockRejectedValue(new Error('Permission denied'))
 
@@ -64,7 +64,7 @@ describe('CLI Core Functionality', () => {
   })
 
   describe('Configuration Management', () => {
-    it('should validate quantum configuration', async () => {
+    it('should validate quantum configuration', async() => {
       const validConfig = {
         framework: 'qiskit',
         provider: 'ibmq',
@@ -79,7 +79,7 @@ describe('CLI Core Functionality', () => {
       expect(validConfig.testing.default_shots).toBe(1000)
     })
 
-    it('should detect invalid configuration', async () => {
+    it('should detect invalid configuration', async() => {
       const invalidConfig = {
         framework: 'invalid-framework',
         testing: {
@@ -120,7 +120,7 @@ describe('CLI Core Functionality', () => {
   })
 
   describe('Interactive Prompts', () => {
-    it('should handle user input for framework selection', async () => {
+    it('should handle user input for framework selection', async() => {
       const inquirer = require('inquirer')
       inquirer.prompt.mockResolvedValue({
         framework: 'qiskit',
@@ -137,7 +137,7 @@ describe('CLI Core Functionality', () => {
       })
     })
 
-    it('should validate user input', async () => {
+    it('should validate user input', async() => {
       const inquirer = require('inquirer')
       inquirer.prompt.mockResolvedValue({
         framework: 'invalid-framework'
@@ -152,7 +152,7 @@ describe('CLI Core Functionality', () => {
     it('should provide helpful error messages', () => {
       // Custom error class test
       class CLIError extends Error {
-        constructor (message, code) {
+        constructor(message, code) {
           super(message)
           this.name = 'CLIError'
           this.code = code
