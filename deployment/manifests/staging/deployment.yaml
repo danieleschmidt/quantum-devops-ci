@@ -1,0 +1,66 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "quantum-devops-ci",
+    "namespace": "quantum-staging",
+    "labels": {
+      "app": "quantum-devops-ci",
+      "environment": "staging"
+    }
+  },
+  "spec": {
+    "replicas": 2,
+    "selector": {
+      "matchLabels": {
+        "app": "quantum-devops-ci"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "quantum-devops-ci"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "quantum-devops-ci",
+            "image": "ghcr.io/quantum-devops/quantum-devops-ci:v1.0.0",
+            "ports": [
+              {
+                "containerPort": 8080
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "1000m",
+                "memory": "2Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "1Gi"
+              }
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/health",
+                "port": 8080
+              },
+              "initialDelaySeconds": 30,
+              "periodSeconds": 10
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/ready",
+                "port": 8080
+              },
+              "initialDelaySeconds": 5,
+              "periodSeconds": 5
+            }
+          }
+        ]
+      }
+    }
+  }
+}

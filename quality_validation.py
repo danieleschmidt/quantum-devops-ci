@@ -107,8 +107,8 @@ class QualityGateValidator:
         try:
             from quantum_devops_ci.cost import CostOptimizer
             optimizer = CostOptimizer()
-            assert hasattr(optimizer, 'estimate_cost')
-            assert hasattr(optimizer, 'optimize_for_cost')
+            assert hasattr(optimizer, 'optimize_experiments')
+            assert hasattr(optimizer, 'calculate_job_cost')
             tests_passed += 1
             logger.info("  ✅ CostOptimizer instantiation")
         except Exception as e:
@@ -311,8 +311,8 @@ class QualityGateValidator:
         try:
             from quantum_devops_ci.security import SecurityManager, requires_auth, audit_action
             manager = SecurityManager()
-            assert hasattr(manager, 'validate_credentials')
-            assert hasattr(manager, 'check_authorization')
+            assert hasattr(manager, 'authenticate')
+            assert hasattr(manager, 'authorize')
             tests_passed += 1
             logger.info("  ✅ SecurityManager functionality")
         except Exception as e:
