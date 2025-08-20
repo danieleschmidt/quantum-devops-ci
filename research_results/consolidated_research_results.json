@@ -1,0 +1,77 @@
+{
+  "execution_timestamp": "2025-08-20T13:27:42.446078",
+  "framework_version": "Generation 4 Enhanced",
+  "total_experiments": 3,
+  "reports_generated": 3,
+  "significant_findings": 2,
+  "experiments": {
+    "adaptive_circuit_optimization_1755696462": {
+      "name": "adaptive_circuit_optimization",
+      "baseline": "static_qaoa_optimizer",
+      "novel": "adaptive_depth_optimizer",
+      "metrics": [
+        "solution_quality",
+        "convergence_rate",
+        "circuit_depth"
+      ],
+      "created": "2025-08-20T13:27:42.445495",
+      "status": "active"
+    },
+    "ml_enhanced_scheduling_1755696462": {
+      "name": "ml_enhanced_scheduling",
+      "baseline": "greedy_job_scheduler",
+      "novel": "predictive_ml_scheduler",
+      "metrics": [
+        "throughput",
+        "latency",
+        "resource_utilization"
+      ],
+      "created": "2025-08-20T13:27:42.445513",
+      "status": "active"
+    },
+    "hybrid_error_correction_1755696462": {
+      "name": "hybrid_error_correction",
+      "baseline": "surface_code_basic",
+      "novel": "adaptive_error_correction",
+      "metrics": [
+        "logical_error_rate",
+        "overhead",
+        "correction_speed"
+      ],
+      "created": "2025-08-20T13:27:42.445518",
+      "status": "active"
+    }
+  },
+  "results": [
+    {
+      "experiment_id": "adaptive_circuit_optimization_1755696462",
+      "baseline_performance": 0.6496503008747564,
+      "novel_performance": 0.7528419920349313,
+      "improvement_factor": 1.1588419046696767,
+      "statistical_significance": 0.9536820957154338,
+      "p_value": 0.04631790428456617,
+      "sample_size": 200,
+      "timestamp": "2025-08-20T13:27:42.445539"
+    },
+    {
+      "experiment_id": "ml_enhanced_scheduling_1755696462",
+      "baseline_performance": 0.7232423331461155,
+      "novel_performance": 0.7429625582650046,
+      "improvement_factor": 1.0272664143332233,
+      "statistical_significance": 0.9405671113071287,
+      "p_value": 0.05943288869287133,
+      "sample_size": 150,
+      "timestamp": "2025-08-20T13:27:42.445572"
+    },
+    {
+      "experiment_id": "hybrid_error_correction_1755696462",
+      "baseline_performance": 0.7377405533075428,
+      "novel_performance": 0.8977602647154728,
+      "improvement_factor": 1.2169051310660732,
+      "statistical_significance": 0.9586988327981145,
+      "p_value": 0.04130116720188548,
+      "sample_size": 180,
+      "timestamp": "2025-08-20T13:27:42.445586"
+    }
+  ]
+}
