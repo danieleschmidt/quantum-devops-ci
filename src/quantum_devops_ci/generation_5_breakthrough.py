@@ -12,6 +12,7 @@ Novel Contributions:
 5. Neural Architecture Search for Quantum Algorithm Discovery
 """
 
+from __future__ import annotations
 import asyncio
 import logging
 import numpy as np
@@ -53,7 +54,7 @@ class QuantumInspiredOptimizer:
         self.optimization_history = []
         self.entanglement_cache = {}
         
-    def _initialize_superposition_state(self) -> QuantumState:
+    def _initialize_superposition_state(self) -> 'QuantumState':
         """Initialize quantum state in superposition."""
         amplitudes = np.random.complex128(self.state_dimension)
         amplitudes = amplitudes / np.linalg.norm(amplitudes)
