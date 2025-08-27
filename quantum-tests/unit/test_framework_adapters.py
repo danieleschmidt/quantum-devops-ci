@@ -15,7 +15,7 @@ from quantum_devops_ci.plugins import (
     CirqAdapter, 
     MockAdapter
 )
-from quantum_devops_ci.testing import NoiseAwareTest
+from quantum_devops_ci import NoiseAwareTest
 
 
 class TestQiskitAdapter:

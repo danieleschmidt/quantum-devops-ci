@@ -10,7 +10,7 @@ import warnings
 from pathlib import Path
 
 # Import quantum testing framework
-from quantum_devops_ci.testing import NoiseAwareTest
+from quantum_devops_ci.testing import NoiseAwareTestBase
 from quantum_devops_ci import AVAILABLE_FRAMEWORKS
 
 # Configure pytest for quantum testing
@@ -41,10 +41,11 @@ def test_data_dir():
 @pytest.fixture(scope="function")
 def quantum_test_runner():
     """Provide a configured quantum test runner."""
-    return NoiseAwareTest(
-        default_shots=1000,
-        timeout_seconds=300
-    )
+    runner = NoiseAwareTestBase()
+    runner.setup_method(None)
+    runner.default_shots = 1000
+    runner.timeout_seconds = 300
+    return runner
 
 
 # Skip markers for conditional test execution

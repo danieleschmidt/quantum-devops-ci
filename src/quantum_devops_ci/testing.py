@@ -78,7 +78,7 @@ class TestResult:
         return {state: count / total_shots for state, count in self.counts.items()}
 
 
-class NoiseAwareTest(abc.ABC):
+class NoiseAwareTestBase(abc.ABC):
     """
     Base class for noise-aware quantum testing.
     
@@ -86,17 +86,15 @@ class NoiseAwareTest(abc.ABC):
     under various noise conditions, supporting multiple quantum frameworks.
     """
     
-    def __init__(self, default_shots: int = 1000, timeout_seconds: int = 300):
-        """
-        Initialize noise-aware test.
-        
-        Args:
-            default_shots: Default number of measurement shots
-            timeout_seconds: Maximum execution time for tests
-        """
-        self.default_shots = default_shots
-        self.timeout_seconds = timeout_seconds
+    def setup_method(self, method):
+        """Set up test method - called before each test."""
+        self.default_shots = getattr(self, 'default_shots', 1000)
+        self.timeout_seconds = getattr(self, 'timeout_seconds', 300)
         self.backend_cache = {}
+    
+    def teardown_method(self, method):
+        """Clean up after test method."""
+        self.backend_cache.clear()
     
     @requires_auth('test.execute')
     @audit_action('run_circuit', 'quantum_circuit')
@@ -692,7 +690,7 @@ def quantum_fixture(func: Callable) -> Callable:
 
 
 # Hardware compatibility test base class
-class HardwareCompatibilityTest(NoiseAwareTest):
+class HardwareCompatibilityTest(NoiseAwareTestBase):
     """
     Base class for testing hardware compatibility.
     

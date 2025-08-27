@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 import concurrent.futures
 from functools import wraps
 
-from quantum_devops_ci.testing import NoiseAwareTest
+from quantum_devops_ci import NoiseAwareTest
 from quantum_devops_ci.linting import QuantumLinter
 from quantum_devops_ci.scheduling import QuantumJobScheduler
 

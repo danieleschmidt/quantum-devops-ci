@@ -17,7 +17,7 @@ QUANTUM_TEST_CONFIG = {
 }
 
 # Export test utilities
-from quantum_devops_ci.testing import NoiseAwareTest, quantum_fixture
+from quantum_devops_ci import NoiseAwareTest, quantum_fixture
 from quantum_devops_ci.pytest_plugin import (
     assert_quantum_state_close,
     assert_fidelity_above,

@@ -10,7 +10,7 @@ import warnings
 from typing import Generator, Any, Dict, Optional
 from pathlib import Path
 
-from .testing import NoiseAwareTest
+from .testing import NoiseAwareTestBase
 from . import AVAILABLE_FRAMEWORKS
 
 
@@ -108,10 +108,12 @@ def quantum_test_config():
 @pytest.fixture(scope="function")
 def quantum_tester(quantum_test_config):
     """Function-scoped fixture providing NoiseAwareTest instance."""
-    return NoiseAwareTest(
-        default_shots=quantum_test_config["default_shots"],
-        timeout_seconds=quantum_test_config["timeout_seconds"]
-    )
+    # Create a basic test instance without __init__
+    tester = NoiseAwareTestBase()
+    tester.setup_method(None)
+    tester.default_shots = quantum_test_config["default_shots"]
+    tester.timeout_seconds = quantum_test_config["timeout_seconds"]
+    return tester
 
 
 @pytest.fixture(scope="function")

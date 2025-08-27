@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 import yaml
 import json
 
-from quantum_devops_ci.testing import NoiseAwareTest
+from quantum_devops_ci import NoiseAwareTest
 from quantum_devops_ci.linting import QuantumLinter
 from quantum_devops_ci.scheduling import QuantumJobScheduler
 from quantum_devops_ci.cost import CostOptimizer
@@ -436,7 +436,7 @@ def run_vqe_experiment(backend='qasm_simulator', shots=1000):
         test_file = test_dir / "test_algorithm.py"
         test_content = """
 import pytest
-from quantum_devops_ci.testing import NoiseAwareTest
+from quantum_devops_ci import NoiseAwareTest
 from algorithms.main import create_vqe_ansatz
 
 class TestVQEAlgorithm(NoiseAwareTest):
