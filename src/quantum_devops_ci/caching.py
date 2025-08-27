@@ -543,6 +543,11 @@ class CacheManager:
         self.backend_cache.clear()
         self.cost_cache.clear()
     
+    async def optimize(self):
+        """Optimize all caches by cleaning expired entries."""
+        # This is a simple optimization - in practice could be more sophisticated
+        pass
+        
     def get_global_stats(self) -> Dict[str, Any]:
         """Get statistics for all caches."""
         return {

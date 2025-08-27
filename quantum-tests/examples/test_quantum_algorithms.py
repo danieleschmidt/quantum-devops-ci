@@ -8,7 +8,7 @@ and hardware compatibility checks.
 
 import pytest
 import numpy as np
-from quantum_devops_ci.testing import NoiseAwareTest, quantum_fixture
+from quantum_devops_ci import NoiseAwareTest, quantum_fixture
 
 # Try importing quantum frameworks
 try:

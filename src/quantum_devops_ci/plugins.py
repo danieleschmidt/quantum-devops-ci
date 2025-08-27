@@ -31,6 +31,16 @@ class QuantumFrameworkAdapter(ABC):
     def get_counts(self, result: Any) -> Dict[str, int]:
         """Extract measurement counts from result."""
         pass
+    
+    @abstractmethod
+    def supports(self, framework: str) -> bool:
+        """Check if adapter supports the given framework."""
+        pass
+    
+    @abstractmethod
+    def is_available(self) -> bool:
+        """Check if the framework is available and functional."""
+        pass
 
 class QiskitAdapter(QuantumFrameworkAdapter):
     """Adapter for Qiskit quantum framework."""
@@ -77,6 +87,14 @@ class QiskitAdapter(QuantumFrameworkAdapter):
     def get_counts(self, result: Any) -> Dict[str, int]:
         """Get counts from Qiskit result."""
         return result.get_counts()
+    
+    def supports(self, framework: str) -> bool:
+        """Check if adapter supports Qiskit framework."""
+        return framework.lower() in ['qiskit', 'qiskit-terra', 'qiskit-aer']
+    
+    def is_available(self) -> bool:
+        """Check if Qiskit is available."""
+        return self.available
 
 class CirqAdapter(QuantumFrameworkAdapter):
     """Adapter for Cirq quantum framework."""
@@ -135,6 +153,14 @@ class CirqAdapter(QuantumFrameworkAdapter):
             counts[bit_string] = counts.get(bit_string, 0) + 1
         
         return counts
+    
+    def supports(self, framework: str) -> bool:
+        """Check if adapter supports Cirq framework."""
+        return framework.lower() in ['cirq', 'cirq-core', 'cirq-google']
+    
+    def is_available(self) -> bool:
+        """Check if Cirq is available."""
+        return self.available
 
 class MockAdapter(QuantumFrameworkAdapter):
     """Mock adapter for testing when no quantum frameworks are available."""
@@ -169,6 +195,14 @@ class MockAdapter(QuantumFrameworkAdapter):
     def get_counts(self, result: Any) -> Dict[str, int]:
         """Get counts from mock result."""
         return result['counts']
+    
+    def supports(self, framework: str) -> bool:
+        """Check if adapter supports mock framework."""
+        return framework.lower() in ['mock', 'test', 'simulator']
+    
+    def is_available(self) -> bool:
+        """Mock adapter is always available."""
+        return self.available
 
 class FrameworkRegistry:
     """Registry for quantum framework adapters."""

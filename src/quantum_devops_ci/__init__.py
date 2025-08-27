@@ -14,9 +14,15 @@ from .caching import MemoryCache, DiskCache, MultiLevelCache, CacheManager
 
 # Optional imports with fallbacks
 try:
-    from .testing import NoiseAwareTest
+    from .testing import NoiseAwareTestBase
+    NoiseAwareTest = NoiseAwareTestBase  # Backward compatibility
 except ImportError:
-    NoiseAwareTest = None
+    NoiseAwareTest = NoiseAwareTestBase = None
+
+try:
+    from .quantum_fixtures import quantum_fixture
+except ImportError:
+    quantum_fixture = None
 
 try:
     from .linting import QuantumLinter, PulseLinter
@@ -56,6 +62,7 @@ __email__ = "community@quantum-devops.org"
 __all__ = [
     # Testing framework
     "NoiseAwareTest",
+    "NoiseAwareTestBase", 
     "quantum_fixture",
     
     # Linting and validation
@@ -71,6 +78,11 @@ __all__ = [
     
     # Deployment and testing
     "QuantumABTest",
+    
+    # Core infrastructure
+    "SecurityContext",
+    "SecurityManager",
+    "CacheManager",
 ]
 
 # Framework compatibility check
